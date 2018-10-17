@@ -1,6 +1,25 @@
 {
 	"comment": "",
 	"ignore": "test",
-	"package": [],
+	"package": [
+		{
+			"checksumSHA1": "cVX1SoiiWTH7ejH1ov+O7Vyg5x0=",
+			"path": "github.com/rs/zerolog",
+			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
+			"revisionTime": "2018-09-28T01:11:43Z"
+		},
+		{
+			"checksumSHA1": "eZCcD/xb9cOwTokFOztRZP66Q98=",
+			"path": "github.com/rs/zerolog/internal/cbor",
+			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
+			"revisionTime": "2018-09-28T01:11:43Z"
+		},
+		{
+			"checksumSHA1": "zijzEk4jVMHaqn29CNK0qB9uyNo=",
+			"path": "github.com/rs/zerolog/internal/json",
+			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
+			"revisionTime": "2018-09-28T01:11:43Z"
+		}
+	],
 	"rootPath": "github.com/slince/jinbox"
 }

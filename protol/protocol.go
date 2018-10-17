@@ -1,14 +1,16 @@
 package protol
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Protocol struct {
-	 Action string
-	 Body map[string]interface{}
-	 Headers map[string]interface{}
+	 Action string `json:"action"`
+	 Body map[string]interface{} `json:"body"`
+	 Headers map[string]string `json:"headers"`
 }
 
-// Make protocol to json.
+// Convert a protocol to json string.
 func (protocol *Protocol) ToString() (string, error) {
 	bytes, error := json.Marshal(protocol)
 
@@ -19,7 +21,16 @@ func (protocol *Protocol) ToString() (string, error) {
 	}
 }
 
-// Create protocol from json
-func FromJsonString(jsonString string) Protocol{
+// Create protocol from json string.
+func FromJsonString(jsonString string) (*Protocol,error){
 
+	protocol := &Protocol{}
+
+	error := json.Unmarshal([]byte(jsonString), protocol)
+
+	if error != nil {
+		return nil, error
+	}
+
+	return protocol, nil
 }
