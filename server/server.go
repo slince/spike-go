@@ -1,6 +1,10 @@
 package server
 
-import "net"
+import (
+	"bufio"
+	"github.com/slince/jinbox/protol"
+	"net"
+)
 
 type Server struct {
 	Address string
@@ -25,8 +29,20 @@ func (server *Server) Run() {
 }
 
 // handle connection from client.
-func (server *Server) handleConnection(connection net.Conn) {
+func (server *Server) handleConnection(connection net.Conn) error{
+	str, err := bufio.NewReader(connection).ReadString('\n')
 
+	if err != nil {
+		return err
+	}
+
+	protocol,err := protol.FromJsonString(str)
+
+	if err != nil {
+		return err
+	}
+
+	
 }
 
 
