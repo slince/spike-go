@@ -4,19 +4,20 @@ package event
 type listener func(event *Event)
 
 type ListenerQueue struct {
-	listeners []listener
+	listeners []*listener
 }
 
 // Add a listener to queue.
-func (q ListenerQueue) add(callback listener){
+func (q *ListenerQueue) add(callback *listener){
 	q.listeners = append(q.listeners, callback)
 }
 
 // Add a listener to queue.
-func (q ListenerQueue) remove(callback listener){
+func (q *ListenerQueue) remove(callback *listener){
 	for k, v := range q.listeners {
 		if v == callback {
-
+			q.listeners = append(q.listeners[:k], q.listeners[k+1:]...)
+			return
 		}
 	}
 }
@@ -24,37 +25,37 @@ func (q ListenerQueue) remove(callback listener){
 
 // Dispatcher
 type Dispatcher struct {
-	listeners map[string][]listener
+	listeners map[string]*ListenerQueue
 }
 
 // Add a listener to dispatcher.
 func (dispatcher *Dispatcher) On(eventName string, callback listener) {
-
-	listeners, ok := dispatcher.listeners[eventName]
+	listenerQueue, ok := dispatcher.listeners[eventName]
 	if !ok {
-		listeners = make([]listener, 0, 10)
+		listenerQueue = &ListenerQueue{
+			make([]*listener, 0),
+		}
+		dispatcher.listeners[eventName] = listenerQueue
 	}
-	listeners = append(listeners, callback)
-	dispatcher.listeners[eventName] = listeners
+	listenerQueue.add(&callback)
 }
 
 // Remove a listener from the dispatcher.
 func (dispatcher *Dispatcher) Off(eventName string, callback listener) {
 	if callback == nil {
 		delete(dispatcher.listeners, eventName)
-	} else if listeners, ok := dispatcher.listeners[eventName]; ok {
-		
+	} else if listenerQueue, ok := dispatcher.listeners[eventName]; ok {
+		listenerQueue.remove(&callback)
 	}
 }
 
 // Fire the event
 func (dispatcher *Dispatcher) Fire(event Event){
-
-	listeners, ok := dispatcher.listeners[event.GetName()]
+	listenerQueue, ok := dispatcher.listeners[event.GetName()]
 
 	if ok {
-		for _, listener := range listeners {
-			listener(&event)
+		for _, callback := range listenerQueue.listeners {
+			(*callback)(&event)
 		}
 	}
 }
@@ -62,7 +63,7 @@ func (dispatcher *Dispatcher) Fire(event Event){
 // Creates a new event dispatcher.
 func NewDispatcher() *Dispatcher{
 	return &Dispatcher{
-		make(map[string][]listener),
+		make(map[string]*ListenerQueue),
 	}
 }
 

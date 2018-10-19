@@ -27,7 +27,7 @@ func (event *GenericEvent) GetName() string {
 
 // Stop propagation
 func (event *GenericEvent) StopPropagation() {
-	event.propagationStopped = false
+	event.propagationStopped = true
 }
 
 // Checks whether propagation was stopped.
@@ -39,6 +39,7 @@ func (event *GenericEvent) IsPropagationStopped() bool {
 func NewEvent(name string, data map[string]interface{}) Event{
 	return &GenericEvent{
 		name: name,
+		propagationStopped: false,
 		Data: data,
 	}
 }

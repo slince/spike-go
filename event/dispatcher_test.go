@@ -21,7 +21,3 @@ func TestOn(t *testing.T) {
 		t.Errorf("The listener is not fired")
 	}
 }
-
-func TestMain(m *testing.M){
-	m.Run()
-}
