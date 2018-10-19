@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"github.com/slince/jinbox/event"
 	"github.com/slince/jinbox/protol"
 	"net"
 )
@@ -9,6 +10,7 @@ import (
 type Server struct {
 	Address string
 	socket net.Listener
+	dispatcher *event.Dispatcher
 }
 
 // Run the server
@@ -36,13 +38,17 @@ func (server *Server) handleConnection(connection net.Conn) error{
 		return err
 	}
 
-	protocol,err := protol.FromJsonString(str)
+	message,err := protol.FromJsonString(str)
 
 	if err != nil {
 		return err
 	}
 
-	
+	ev := event.NewEvent("message", map[string]interface{}{"message":  message})
+
+	server.dispatcher.Fire(ev)
+
+	return nil
 }
 
 
@@ -51,5 +57,6 @@ func CreateServer(address string) *Server {
 	return &Server{
 		address,
 		nil,
+		event.NewDispatcher(),
 	}
 }
