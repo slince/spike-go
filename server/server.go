@@ -30,6 +30,10 @@ func (server *Server) Run() {
 	}
 }
 
+// Register all listeners
+func (server *Server)registerListeners() {
+
+}
 // handle connection from client.
 func (server *Server) handleConnection(connection net.Conn) error{
 	str, err := bufio.NewReader(connection).ReadString('\n')
