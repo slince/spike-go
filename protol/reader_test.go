@@ -42,7 +42,7 @@ func TestReadManyJson(t *testing.T) {
 }
 
 func TestReadHalf(t *testing.T) {
-	reader := NewReader(bytes.NewBuffer([]byte(jsonMessage + "hello world")))
+	reader := NewReader(bytes.NewBuffer([]byte(jsonMessage + `["hello"`)))
 
 	messages,err := reader.Read()
 
@@ -54,7 +54,7 @@ func TestReadHalf(t *testing.T) {
 		t.Errorf("error parse action")
 	}
 
-	if reader.Incoming.String() != "hello world" {
+	if reader.Incoming.String() != `["hello"` {
 		t.Errorf("error parse")
 	}
 }
