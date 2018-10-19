@@ -6,60 +6,71 @@ import (
 	"io"
 )
 
+const maxReadLength = 60
+
 // Protocol Reader
 type Reader struct {
 	rd io.Reader
-	incoming *bytes.Buffer
+	Incoming *bytes.Buffer
 	endCharacter string
 }
 
 // Read a message from io.reader
-func (reader *Reader) ReadMessage() (*Protocol, error) {
+func (reader *Reader) Read() ([]*Protocol, error) {
+	var messages = make([]*Protocol, 0, 5)
 
 	for {
-		incoming, err := reader.read(50)
+		chunk := make([]byte, maxReadLength)
+		read, err := reader.rd.Read(chunk)
 
-		if err == nil && len(incoming) > 0 {
-			//
-			for len(incoming) > 0 {
+		if err == nil {
+
+			if read < maxReadLength {
+				chunk = chunk[:read]
+			}
+
+			for len(chunk) > 0 {
 
 				if reader.endCharacter == "" {
-					firstCharacter := string(incoming[0])
+					firstCharacter := string(chunk[0])
 
 					if firstCharacter == "[" {
 						reader.endCharacter = "]"
 					} else if firstCharacter == "{" {
 						reader.endCharacter = "}"
 					} else {
-						return nil, errors.New("bad json start character")
+						return nil, errors.New("bad json start character:" + firstCharacter)
 					}
-
 				}
-				pos := bytes.IndexAny(incoming, reader.endCharacter)
+
+				pos := bytes.Index(chunk, []byte(reader.endCharacter))
 
 				if pos == -1 {
+					reader.Incoming.Write(chunk)
 					break
 				}
 
+				reader.Incoming.Write(chunk[:pos+1])
+				chunk = chunk[pos+1:]
 
+				message, err := FromJsonString(reader.Incoming.String())
 
+				if err == nil {
+					messages = append(messages, message)
+					reader.Incoming.Reset()
+					reader.endCharacter = ""
+				}
 			}
+
+			if read < maxReadLength {
+				break
+			}
+
+		} else {
+			break
 		}
 	}
-
-}
-
-// read
-func (reader *Reader)read(n int) ([]byte, error) {
-	incoming := make([]byte, n)
-
-	n, err := reader.rd.Read(incoming)
-
-	if err == nil && n > 0 {
-		reader.incoming.Write(incoming)
-	}
-
-	return incoming, nil
+	return messages, nil
 }
 
 

@@ -26,10 +26,10 @@ func FromJsonString(jsonString string) (*Protocol,error){
 
 	protocol := &Protocol{}
 
-	error := json.Unmarshal([]byte(jsonString), protocol)
+	err := json.Unmarshal([]byte(jsonString), protocol)
 
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	return protocol, nil
