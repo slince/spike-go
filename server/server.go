@@ -36,7 +36,10 @@ func (server *Server) Run() {
 
 // Register all listeners
 func (server *Server)registerListeners() {
-	server
+	var callback = func(event *event.Event) {
+
+	}
+	server.dispatcher.On(serverInit, listener)
 }
 
 // handle connection from client.

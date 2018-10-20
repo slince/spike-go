@@ -1,28 +1,28 @@
 package event
 
 // Listener type
-type listener func(event *Event)
+type Listener func(event *Event)
 
-// subscriber
-type subscriber struct {
-	Listeners map[string]listener
+// Subscriber
+type Subscriber struct {
+	Listeners map[string]*Listener
 }
 
-// listener queue
-type ListenerQueue struct {
-	listeners []*listener
+// Listener queue
+type listenerQueue struct {
+	listeners []*Listener
 }
 
-// Add a listener to queue.
-func (q *ListenerQueue) add(callback *listener){
-	q.listeners = append(q.listeners, callback)
+// Add a Listener to queue.
+func (lq *listenerQueue) add(callback *Listener){
+	lq.listeners = append(lq.listeners, callback)
 }
 
-// Add a listener to queue.
-func (q *ListenerQueue) remove(callback *listener){
-	for k, v := range q.listeners {
+// Add a Listener to queue.
+func (lq *listenerQueue) remove(callback *Listener){
+	for k, v := range lq.listeners {
 		if v == callback {
-			q.listeners = append(q.listeners[:k], q.listeners[k+1:]...)
+			lq.listeners = append(lq.listeners[:k], lq.listeners[k+1:]...)
 			return
 		}
 	}
@@ -30,37 +30,37 @@ func (q *ListenerQueue) remove(callback *listener){
 
 // Dispatcher
 type Dispatcher struct {
-	listeners map[string]*ListenerQueue
+	listeners map[string]*listenerQueue
 }
 
-// Add a subscriber
-func (dispatcher *Dispatcher) AddSubscriber(sub *subscriber) {
+// Add a Subscriber
+func (dispatcher *Dispatcher) AddSubscriber(sub *Subscriber) {
 	for ev, callback := range sub.Listeners {
 		dispatcher.On(ev, callback)
 	}
 }
 
-// Remove a subscriber
-func (dispatcher *Dispatcher) RemoveSubscriber(sub *subscriber) {
+// Remove a Subscriber
+func (dispatcher *Dispatcher) RemoveSubscriber(sub *Subscriber) {
 	for ev, callback := range sub.Listeners {
 		dispatcher.Off(ev, callback)
 	}
 }
 
-// Add a listener to dispatcher.
-func (dispatcher *Dispatcher) On(eventName string, callback listener) {
-	listenerQueue, ok := dispatcher.listeners[eventName]
+// Add a Listener to dispatcher.
+func (dispatcher *Dispatcher) On(eventName string, callback *Listener) {
+	lq, ok := dispatcher.listeners[eventName]
 	if !ok {
-		listenerQueue = &ListenerQueue{
-			make([]*listener, 0),
+		lq = &listenerQueue{
+			make([]*Listener, 0),
 		}
-		dispatcher.listeners[eventName] = listenerQueue
+		dispatcher.listeners[eventName] = lq
 	}
-	listenerQueue.add(&callback)
+	lq.add(callback)
 }
 
-// Remove a listener from the dispatcher.
-func (dispatcher *Dispatcher) Off(eventName string, callback *listener) {
+// Remove a Listener from the dispatcher.
+func (dispatcher *Dispatcher) Off(eventName string, callback *Listener) {
 	if callback == nil {
 		delete(dispatcher.listeners, eventName)
 	} else if listenerQueue, ok := dispatcher.listeners[eventName]; ok {
@@ -70,10 +70,10 @@ func (dispatcher *Dispatcher) Off(eventName string, callback *listener) {
 
 // Fire the event
 func (dispatcher *Dispatcher) Fire(event Event){
-	listenerQueue, ok := dispatcher.listeners[event.GetName()]
+	lq, ok := dispatcher.listeners[event.GetName()]
 
 	if ok {
-		for _, callback := range listenerQueue.listeners {
+		for _, callback := range lq.listeners {
 			(*callback)(&event)
 		}
 	}
@@ -82,7 +82,27 @@ func (dispatcher *Dispatcher) Fire(event Event){
 // Creates a new event dispatcher.
 func NewDispatcher() *Dispatcher{
 	return &Dispatcher{
-		make(map[string]*ListenerQueue),
+		make(map[string]*listenerQueue),
+	}
+}
+
+// Creates a new listener.
+func NewListener(callback func(event *Event)) *Listener{
+	return (*Listener)(&callback)
+}
+
+
+// Creates a new listener.
+func NewSubscriber(listeners map[string]func(event *Event)) *Subscriber{
+
+	var _listeners = make(map[string]*Listener, len(listeners))
+
+	for eventName, callback := range listeners {
+		_listeners[eventName] = NewListener(callback)
+	}
+
+	return &Subscriber{
+		_listeners,
 	}
 }
 
