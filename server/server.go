@@ -15,6 +15,10 @@ type Server struct {
 
 // Run the server
 func (server *Server) Run() {
+
+	// register all listeners
+	server.registerListeners()
+
 	var err error
 	server.socket ,err = net.Listen("tcp", server.Address)
 	if err != nil {
@@ -32,8 +36,9 @@ func (server *Server) Run() {
 
 // Register all listeners
 func (server *Server)registerListeners() {
-
+	server
 }
+
 // handle connection from client.
 func (server *Server) handleConnection(connection net.Conn) error{
 	str, err := bufio.NewReader(connection).ReadString('\n')

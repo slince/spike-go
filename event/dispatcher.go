@@ -3,6 +3,12 @@ package event
 // Listener type
 type listener func(event *Event)
 
+// subscriber
+type subscriber struct {
+	Listeners map[string]listener
+}
+
+// listener queue
 type ListenerQueue struct {
 	listeners []*listener
 }
@@ -22,10 +28,23 @@ func (q *ListenerQueue) remove(callback *listener){
 	}
 }
 
-
 // Dispatcher
 type Dispatcher struct {
 	listeners map[string]*ListenerQueue
+}
+
+// Add a subscriber
+func (dispatcher *Dispatcher) AddSubscriber(sub *subscriber) {
+	for ev, callback := range sub.Listeners {
+		dispatcher.On(ev, callback)
+	}
+}
+
+// Remove a subscriber
+func (dispatcher *Dispatcher) RemoveSubscriber(sub *subscriber) {
+	for ev, callback := range sub.Listeners {
+		dispatcher.Off(ev, callback)
+	}
 }
 
 // Add a listener to dispatcher.
@@ -41,11 +60,11 @@ func (dispatcher *Dispatcher) On(eventName string, callback listener) {
 }
 
 // Remove a listener from the dispatcher.
-func (dispatcher *Dispatcher) Off(eventName string, callback listener) {
+func (dispatcher *Dispatcher) Off(eventName string, callback *listener) {
 	if callback == nil {
 		delete(dispatcher.listeners, eventName)
 	} else if listenerQueue, ok := dispatcher.listeners[eventName]; ok {
-		listenerQueue.remove(&callback)
+		listenerQueue.remove(callback)
 	}
 }
 
