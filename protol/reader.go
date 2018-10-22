@@ -17,9 +17,7 @@ type Reader struct {
 
 // Read a message from io.reader
 func (reader *Reader) Read() ([]*Protocol, error) {
-
 	var messages = make([]*Protocol, 0, 5)
-
 	for {
 		chunk := make([]byte, maxReadLength)
 		read, err := reader.rd.Read(chunk)

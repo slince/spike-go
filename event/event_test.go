@@ -7,11 +7,11 @@ import (
 func TestNewEvent(t *testing.T) {
 	event := NewEvent("init", nil)
 
-	if _, ok := event.(Event); !ok {
+	if _, ok := interface{}(event).(*Event); !ok {
 		t.Errorf("create event error")
 	}
 
-	if event.GetName() != "init" {
+	if event.Name != "init" {
 		t.Errorf("bad get name")
 	}
 }
@@ -20,13 +20,13 @@ func TestNewEvent(t *testing.T) {
 func TestEvent(t *testing.T) {
 	event := NewEvent("init", nil)
 
-	if event.IsPropagationStopped() {
+	if event.PropagationStopped {
 		t.Errorf("error init data")
 	}
 
-	event.StopPropagation()
+	event.PropagationStopped = true
 
-	if !event.IsPropagationStopped() {
+	if !event.PropagationStopped {
 		t.Errorf("error stop propagation")
 	}
 

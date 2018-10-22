@@ -12,10 +12,10 @@ type Protocol struct {
 
 // Convert a protocol to json string.
 func (protocol *Protocol) ToString() (string, error) {
-	bytes, error := json.Marshal(protocol)
+	bytes, err := json.Marshal(protocol)
 
-	if error != nil {
-		return "", error
+	if err != nil {
+		return "", err
 	}  else {
 		return string(bytes),nil
 	}

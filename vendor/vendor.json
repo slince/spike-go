@@ -3,22 +3,16 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "cVX1SoiiWTH7ejH1ov+O7Vyg5x0=",
-			"path": "github.com/rs/zerolog",
-			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
-			"revisionTime": "2018-09-28T01:11:43Z"
+			"checksumSHA1": "d8Vpn/RIPVgguK1yGGf/S/SvshU=",
+			"path": "github.com/huin/goupnp",
+			"revision": "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",
+			"revisionTime": "2018-10-13T14:04:17Z"
 		},
 		{
-			"checksumSHA1": "eZCcD/xb9cOwTokFOztRZP66Q98=",
-			"path": "github.com/rs/zerolog/internal/cbor",
-			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
-			"revisionTime": "2018-09-28T01:11:43Z"
-		},
-		{
-			"checksumSHA1": "zijzEk4jVMHaqn29CNK0qB9uyNo=",
-			"path": "github.com/rs/zerolog/internal/json",
-			"revision": "8e36cbf881d3eadd0c6455d55588af60c7cc4736",
-			"revisionTime": "2018-09-28T01:11:43Z"
+			"checksumSHA1": "ktBWGc6nry3FjQ1rAY5IrJ+wfuM=",
+			"path": "github.com/rs/xid",
+			"revision": "15d26544def341f036c5f8dca987a4cbe575032c",
+			"revisionTime": "2018-08-30T17:51:11Z"
 		}
 	],
 	"rootPath": "github.com/slince/jinbox"

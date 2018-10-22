@@ -1,9 +1,10 @@
 package server
 
-
 const (
-	serverInit = "init"
-	serverRun = "run"
+	ServerInit = "init"
+	ServerRun = "run"
+	Message = "message"
+	UnknownMessage = "unknownMessage"
 )
 
 

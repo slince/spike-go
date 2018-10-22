@@ -1,7 +1,7 @@
 package event
 
 // Listener type
-type Listener func(event *Event)
+type Listener func(ev *Event)
 
 // Subscriber
 type Subscriber struct {
@@ -69,12 +69,12 @@ func (dispatcher *Dispatcher) Off(eventName string, callback *Listener) {
 }
 
 // Fire the event
-func (dispatcher *Dispatcher) Fire(event Event){
-	lq, ok := dispatcher.listeners[event.GetName()]
+func (dispatcher *Dispatcher) Fire(event *Event){
+	lq, ok := dispatcher.listeners[event.Name]
 
 	if ok {
 		for _, callback := range lq.listeners {
-			(*callback)(&event)
+			(*callback)(event)
 		}
 	}
 }
