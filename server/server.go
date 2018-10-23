@@ -22,8 +22,6 @@ type Server struct {
 	Authentication auth.Authentication
 	// 客户端
 	Clients map[string]*Client
-	//客户端对应的chunk server
-	ChunkServers map[string][]*chunk_server.ChunkServer
 }
 
 // Run the server
@@ -112,5 +110,7 @@ func NewServer(address string) *Server {
 		address,
 		nil,
 		event.NewDispatcher(),
+		nil,
+		make(map[string]*Client, 0),
 	}
 }

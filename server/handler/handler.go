@@ -12,6 +12,6 @@ type MessageHandler interface {
 }
 
 type Handler struct{
-	connection *net.Conn
+	connection net.Conn
 	server *server.Server
 }

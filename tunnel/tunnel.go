@@ -31,7 +31,9 @@ func (tn *HttpTunnel) Match(info map[string]string) bool {
 
 // Create many tunnels.
 func NewManyTunnels(tunnelInfos []map[string]string) []Tunnel{
+
 	var tunnel Tunnel
+
 	tunnels := make([]Tunnel, 5)
 	for _,info := range tunnelInfos {
 		tp,_ := info["type"]
