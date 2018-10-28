@@ -5,6 +5,7 @@ import (
 	"github.com/slince/jinbox/auth"
 	"github.com/slince/jinbox/event"
 	"github.com/slince/jinbox/protol"
+	"github.com/slince/jinbox/server/chunk_server"
 	"github.com/slince/jinbox/server/handler"
 	"github.com/slince/jinbox/server/listener"
 	"github.com/slince/jinbox/tunnel"
@@ -55,6 +56,11 @@ func (server *Server) SendMessage(connection net.Conn, message *protol.Protocol)
 	return nil
 }
 
+// Send message to client
+func (server *Server) SendMessageToClient(client *Client, message *protol.Protocol) error {
+	return server.SendMessage(client.Connection, message)
+}
+
 // Checks whether tunnel is registered.
 func (server *Server) IsTunnelRegistered(tunnel tunnel.Tunnel) bool {
 	for _,client := range server.Clients {
@@ -65,6 +71,18 @@ func (server *Server) IsTunnelRegistered(tunnel tunnel.Tunnel) bool {
 		}
 	}
 	return false
+}
+
+// find chunk server by its tunnel
+func (server *Server) FindChunkServer(id string) chunk_server.ChunkServer{
+	for _,client := range server.Clients {
+		for _, chunkServer := range client.ChunkServers {
+			if chunkServer.GetTunnel().GetId() == id {
+				return chunkServer
+			}
+		}
+	}
+	return nil
 }
 
 // Register all listeners

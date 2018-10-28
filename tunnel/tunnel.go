@@ -6,12 +6,19 @@ type Tunnel interface {
 
 	//匹配两个tunnel是否相同
 	MatchTunnel(tunnel Tunnel) bool
+
+	// gets tunnel id
+	GetId() string
 }
 
 type TcpTunnel struct {
 	Id string `json:"id"` //由服务端统一分配id
 	LocalPort string `json:"local_port"`
 	ServerPort string `json:"server_port"`
+}
+
+func (tn *TcpTunnel) GetId() string {
+	return tn.Id
 }
 
 func (tn *TcpTunnel) Match(info map[string]string) bool {
