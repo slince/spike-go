@@ -8,7 +8,7 @@ import (
 type PublicConn struct {
 	Id string
 	Conn net.Conn
-	ProxyConnChan *chan net.Conn
+	ProxyConnChan chan net.Conn
 }
 
 // Create a public connection.
@@ -17,6 +17,6 @@ func NewPublicConn(conn net.Conn) *PublicConn {
 	return &PublicConn{
 		Id: xid.New().String(),
 		Conn: conn,
-		ProxyConnChan: &ch,
+		ProxyConnChan: ch,
 	}
 }

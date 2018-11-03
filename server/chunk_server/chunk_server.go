@@ -2,7 +2,9 @@ package chunk_server
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
+	"fmt"
 	"github.com/slince/jinbox/protol"
 	"github.com/slince/jinbox/server"
 	"github.com/slince/jinbox/tunnel"
@@ -55,15 +57,13 @@ func (chunkServer *TcpChunkServer) handleConnection(conn *PublicConn) {
 	}
 	chunkServer.Server.SendMessageToClient(chunkServer.Client, &msg)
 
-	bufio.NewReader(conn.Conn).ReadBytes()
-
-
 	// 2. 挂起当前公网请求
-	var proxyConn net.Conn
-	a <- conn.ProxyConnChan
+	//var proxyConn net.Conn
+	proxyConn := <- conn.ProxyConnChan //从通道读取代理请求
+	defer close(conn.ProxyConnChan)
 
-	rconn, wconn := net.Pipe()
-
+	// 3. 管道请求
+	net.Pipe()
 }
 
 func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{
