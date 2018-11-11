@@ -91,9 +91,9 @@ func (server *Server) registerListeners() {
 }
 
 // handle connection from client.
-func (server *Server) handleConnection(connection net.Conn) error{
+func (server *Server) handleConnection(conn net.Conn) error{
 	// 预读多条message
-	rd := protol.NewReader(connection)
+	rd := protol.NewReader(conn)
 	messages,err := rd.Read()
 
 	if err != nil {
@@ -101,7 +101,7 @@ func (server *Server) handleConnection(connection net.Conn) error{
 	}
 
 	for _, message := range messages {
-		err := server.handleMessage(message)
+		err := server.handleMessage(message, conn)
 		if err != nil {
 			return err
 		}
@@ -111,10 +111,16 @@ func (server *Server) handleConnection(connection net.Conn) error{
 }
 
 // Handle message
-func (server *Server) handleMessage(message *protol.Protocol) error {
-	ev := event.NewEvent("message", map[string]interface{}{"message":  message})
+func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) error {
+	// fire event
+	ev := event.NewEvent("message", map[string]interface{}{
+		"message":  message,
+		"server": server,
+		"connection": conn,
+	})
 	server.Dispatcher.Fire(ev)
 
+	// 获取handler
 	hd, ok := ev.Parameters["handler"]
 	// 收到不知名的报文
 	if !ok {
@@ -123,9 +129,15 @@ func (server *Server) handleMessage(message *protol.Protocol) error {
 		return fmt.Errorf("recieve a unknown message")
 	}
 	// 处理消息
-	hdl, ok := hd.(MessageHandler)
-	if ok {
-		hdl.Handle(message)
+	if hdl, ok := hd.(MessageHandler); ok {
+		err := hdl.Handle(message)
+
+		// 有处理错误直接关闭
+		if err != nil {
+			conn.Write([]byte(err.Error()))
+			conn.Close()
+		}
+
 	}
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/rs/xid"
 	"github.com/slince/spike-go/protol"
-	"github.com/slince/spike-go/server/chunk_server"
 	"github.com/slince/spike-go/tunnel"
 	"net"
 )
@@ -24,7 +23,7 @@ type AuthHandler struct{
 	Handler
 }
 
-func (hd *AuthHandler) Handle(message *protol.Protocol){
+func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 	//验证客户端凭证
 	err := hd.server.Authentication.Auth(message.Body)
 
@@ -49,6 +48,7 @@ func (hd *AuthHandler) Handle(message *protol.Protocol){
 		}
 	}
 	hd.server.SendMessage(hd.connection, msg)
+	return nil
 }
 
 // 心跳包处理器
@@ -87,26 +87,22 @@ type RegisterProxyHandler struct{
 	RequireAuthHandler
 }
 
-func (hd *RegisterProxyHandler) Handle(message *protol.Protocol){
+func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
 	tunnelId, ok := message.Headers["tunnel-id"]
 	if !ok {
-		hd.connection.Write([]byte("missing tunnel id"))
-		hd.connection.Close()
-		return
+		return fmt.Errorf("missing tunnel id")
 	}
 	chunkServer := hd.server.FindChunkServer(tunnelId)
 	if chunkServer == nil {
-		hd.connection.Write([]byte(fmt.Sprintf("the chunk server %s is not found", tunnelId)))
-		hd.connection.Close()
-		return
+		return fmt.Errorf("the chunk server %s is not found", tunnelId)
 	}
 	publicConnectionId,ok := message.Headers["public-connection-id"]
 	if !ok { //错误的注册代理协议
-		hd.connection.Write([]byte("missing public id"))
-		hd.connection.Close()
+		return fmt.Errorf("missing public id")
 	}
 	// set proxy connection
 	chunkServer.SetProxyConnection(publicConnectionId, hd.connection)
+	return nil
 }
 
 // 客户端注册隧道时的消息处理器
@@ -114,20 +110,20 @@ type RegisterTunnelHandler struct{
 	RequireAuthHandler
 }
 
-func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol){
+func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 	tunnelsInfo, ok := message.Body["tunnels"]
 	if !ok {
-		return
+		return fmt.Errorf("missing tunnel info")
 	}
 	tunnelsInfoValue, ok := tunnelsInfo.([]map[string]string)
 	if !ok {
-		return
+		return fmt.Errorf("error tunnel info")
 	}
 	//创建tunnel
 	tunnels := tunnel.NewManyTunnels(tunnelsInfoValue)
 	registeredTunnels := make([]tunnel.Tunnel, 0)
 
-	var chunkServers = make([]chunk_server.ChunkServer, len(tunnels))
+	var chunkServers = make([]ChunkServer, len(tunnels))
 	for _,tn := range tunnels {
 		//如果tunnel已经注册则拒绝再次注册
 		if hd.server.IsTunnelRegistered(tn) {
@@ -168,30 +164,76 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol){
 		Body: map[string]interface{}{"tunnels": registeredTunnels},
 	}
 	go hd.server.SendMessage(hd.connection, msg)
+
+	return nil
 }
 
 
 // 创建chunk server
-func newChunkServer(tn tunnel.Tunnel) (chunk_server.ChunkServer,error){
-	var chunkServer chunk_server.ChunkServer
+func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){
+	var chunkServer ChunkServer
 	//生成tunnel的id
 	tunnelId := xid.New().String()
 	switch tn := tn.(type) {
 	case *tunnel.TcpTunnel:
 		tn.Id = tunnelId
-		chunkServer = &chunk_server.TcpChunkServer{
+		chunkServer = &TcpChunkServer{
 			Tunnel: tn,
 		}
 	case *tunnel.HttpTunnel:
 		tn.Id = tunnelId
-		tcpChunkServer := chunk_server.TcpChunkServer{
+		tcpChunkServer := TcpChunkServer{
 			Tunnel: &tn.TcpTunnel,
 		}
-		chunkServer = &chunk_server.HttpChunkServer{
+		chunkServer = &HttpChunkServer{
 			TcpChunkServer: tcpChunkServer,
 		}
 	default:
 		return nil, fmt.Errorf("bad tunnel")
 	}
 	return chunkServer,nil
+}
+
+
+// 消息处理器创建工厂
+type MessageHandlerFactory struct {
+	Conn net.Conn
+	Server *Server
+}
+
+func (factory MessageHandlerFactory) newHandler() Handler{
+	return Handler{
+		factory.Conn,
+		factory.Server,
+	}
+}
+
+func (factory MessageHandlerFactory) NewAuthHandler() MessageHandler{
+	var handler MessageHandler
+	handler = &AuthHandler{
+		factory.newHandler(),
+	}
+	return handler
+}
+
+func (factory MessageHandlerFactory) NewRegisterTunnelHandler() MessageHandler{
+	var handler MessageHandler
+	handler = &RegisterTunnelHandler{
+		RequireAuthHandler{
+			factory.newHandler(),
+			nil,
+		},
+	}
+	return handler
+}
+
+func (factory MessageHandlerFactory) NewRegisterProxyHandler() MessageHandler{
+	var handler MessageHandler
+	handler = &RegisterProxyHandler{
+		RequireAuthHandler{
+			factory.newHandler(),
+			nil,
+		},
+	}
+	return handler
 }

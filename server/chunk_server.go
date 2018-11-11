@@ -73,9 +73,9 @@ func (chunkServer *TcpChunkServer) SetProxyConnection(pubConnId string, conn net
 
 	if pubConn, ok := chunkServer.pubConnCollection[pubConnId];ok {
 		pubConn.ProxyConnChan <- conn
-	} else {
-		return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
+		return nil
 	}
+	return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
 }
 
 func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{
