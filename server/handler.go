@@ -1,4 +1,4 @@
-package handler
+package server
 
 import (
 	"fmt"
@@ -6,9 +6,110 @@ import (
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/server/chunk_server"
 	"github.com/slince/spike-go/tunnel"
+	"net"
 )
+// 消息处理器接口
+type MessageHandler interface {
+	// Handle the message
+	Handle(message *protol.Protocol) error
+}
+
+type Handler struct{
+	connection net.Conn
+	server *Server
+}
 
 // 客户端注册时消息处理器
+type AuthHandler struct{
+	Handler
+}
+
+func (hd *AuthHandler) Handle(message *protol.Protocol){
+	//验证客户端凭证
+	err := hd.server.Authentication.Auth(message.Body)
+
+	var msg *protol.Protocol
+	if err != nil {
+		msg = &protol.Protocol{
+			Action: "auth_response",
+			Headers: map[string]string{"code": "403"},
+		}
+	} else {
+		guid := xid.New().String()
+		client := &Client{
+			Connection: hd.connection,
+			Id: guid,
+		}
+		hd.server.Clients[guid] = client
+
+		msg = &protol.Protocol{
+			Action: "auth_response",
+			Headers: map[string]string{"code": "200"},
+			Body: map[string]interface{}{"client": client},
+		}
+	}
+	hd.server.SendMessage(hd.connection, msg)
+}
+
+// 心跳包处理器
+type PingHandler struct{
+	Handler
+}
+
+func (hd *PingHandler) Handle(message *protol.Protocol){
+	msg := &protol.Protocol{
+		Action: "pong",
+	}
+	hd.server.SendMessage(hd.connection, msg)
+}
+
+
+// 需要验证之后的消息处理器
+type RequireAuthHandler struct {
+	Handler
+	client *Client
+}
+
+func (hd *RequireAuthHandler) isAuthenticated(message *protol.Protocol) bool{
+	clientId, ok := message.Headers["client-id"]
+	if !ok {
+		return false
+	}
+	if client, ok := hd.server.Clients[clientId]; ok{
+		hd.client = client
+		return true
+	}
+	return false
+}
+
+// 注册代理消息处理器
+type RegisterProxyHandler struct{
+	RequireAuthHandler
+}
+
+func (hd *RegisterProxyHandler) Handle(message *protol.Protocol){
+	tunnelId, ok := message.Headers["tunnel-id"]
+	if !ok {
+		hd.connection.Write([]byte("missing tunnel id"))
+		hd.connection.Close()
+		return
+	}
+	chunkServer := hd.server.FindChunkServer(tunnelId)
+	if chunkServer == nil {
+		hd.connection.Write([]byte(fmt.Sprintf("the chunk server %s is not found", tunnelId)))
+		hd.connection.Close()
+		return
+	}
+	publicConnectionId,ok := message.Headers["public-connection-id"]
+	if !ok { //错误的注册代理协议
+		hd.connection.Write([]byte("missing public id"))
+		hd.connection.Close()
+	}
+	// set proxy connection
+	chunkServer.SetProxyConnection(publicConnectionId, hd.connection)
+}
+
+// 客户端注册隧道时的消息处理器
 type RegisterTunnelHandler struct{
 	RequireAuthHandler
 }
@@ -94,4 +195,3 @@ func newChunkServer(tn tunnel.Tunnel) (chunk_server.ChunkServer,error){
 	}
 	return chunkServer,nil
 }
-

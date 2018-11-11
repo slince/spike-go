@@ -1,4 +1,4 @@
-package chunk_server
+package server
 
 import (
 	"github.com/rs/xid"

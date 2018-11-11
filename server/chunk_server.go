@@ -1,10 +1,9 @@
-package chunk_server
+package server
 
 import (
 	"errors"
 	"fmt"
 	"github.com/slince/spike-go/protol"
-	"github.com/slince/spike-go/server"
 	"github.com/slince/spike-go/tunnel"
 	"net"
 )
@@ -23,9 +22,9 @@ type TcpChunkServer struct {
 	//对应的隧道
 	Tunnel *tunnel.TcpTunnel
 	//服务的客户端
-	Client *server.Client
+	Client *Client
 	//服务调度程序
-	Server *server.Server
+	Server *Server
 	//公共请求
 	pubConnCollection map[string]*PublicConn
 }
