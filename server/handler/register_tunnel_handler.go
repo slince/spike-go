@@ -3,9 +3,9 @@ package handler
 import (
 	"fmt"
 	"github.com/rs/xid"
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server/chunk_server"
-	"github.com/slince/jinbox/tunnel"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server/chunk_server"
+	"github.com/slince/spike-go/tunnel"
 )
 
 // 客户端注册时消息处理器
@@ -69,6 +69,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol){
 	go hd.server.SendMessage(hd.connection, msg)
 }
 
+
 // 创建chunk server
 func newChunkServer(tn tunnel.Tunnel) (chunk_server.ChunkServer,error){
 	var chunkServer chunk_server.ChunkServer
@@ -83,7 +84,7 @@ func newChunkServer(tn tunnel.Tunnel) (chunk_server.ChunkServer,error){
 	case *tunnel.HttpTunnel:
 		tn.Id = tunnelId
 		tcpChunkServer := chunk_server.TcpChunkServer{
-			Tunnel:tn,
+			Tunnel: &tn.TcpTunnel,
 		}
 		chunkServer = &chunk_server.HttpChunkServer{
 			TcpChunkServer: tcpChunkServer,

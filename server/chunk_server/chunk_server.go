@@ -1,24 +1,21 @@
 package chunk_server
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server"
-	"github.com/slince/jinbox/tunnel"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server"
+	"github.com/slince/spike-go/tunnel"
 	"net"
-	"strings"
 )
 
 type ChunkServer interface {
 	//启动监听服务
-	Run()
+	Run() error
 	//获取对应的tunnel
 	GetTunnel() tunnel.Tunnel
 	// 设置代理连接
-	SetProxyConnection(publicConnectionId string, conn net.Conn)
+	SetProxyConnection(pubConnId string, conn net.Conn) error
 }
 
 // 监听公网接口
@@ -29,8 +26,11 @@ type TcpChunkServer struct {
 	Client *server.Client
 	//服务调度程序
 	Server *server.Server
+	//公共请求
+	pubConnCollection map[string]*PublicConn
 }
 
+// 启动服务
 func (chunkServer *TcpChunkServer) Run() error {
 	ln,err := net.Listen("tcp", ":" + chunkServer.Tunnel.ServerPort)
 	if  err != nil {
@@ -43,11 +43,13 @@ func (chunkServer *TcpChunkServer) Run() error {
 			continue
 		}
 		publicConnection := NewPublicConn(conn)
+		chunkServer.pubConnCollection[publicConnection.Id] = publicConnection
+		//处理请求
 		go chunkServer.handleConnection(publicConnection)
 	}
 }
 
-func (chunkServer *TcpChunkServer) handleConnection(conn *PublicConn) {
+func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 	//1.收到公网请求，请求客户端代理
 	msg := protol.Protocol{
 		Action: "request_proxy",
@@ -59,11 +61,22 @@ func (chunkServer *TcpChunkServer) handleConnection(conn *PublicConn) {
 
 	// 2. 挂起当前公网请求
 	//var proxyConn net.Conn
-	proxyConn := <- conn.ProxyConnChan //从通道读取代理请求
-	defer close(conn.ProxyConnChan)
+	proxyConn := <- pubConn.ProxyConnChan //从通道读取代理请求
+	defer close(pubConn.ProxyConnChan)
 
 	// 3. 管道请求
-	net.Pipe()
+	pubConn.Pipe(proxyConn)
+	delete(chunkServer.pubConnCollection, pubConn.Id)
+}
+
+// 设置代理链接
+func (chunkServer *TcpChunkServer) SetProxyConnection(pubConnId string, conn net.Conn) error{
+
+	if pubConn, ok := chunkServer.pubConnCollection[pubConnId];ok {
+		pubConn.ProxyConnChan <- conn
+	} else {
+		return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
+	}
 }
 
 func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{

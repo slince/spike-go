@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"github.com/slince/jinbox/protol"
+	"github.com/slince/spike-go/protol"
 )
 
 type RegisterProxyHandler struct{

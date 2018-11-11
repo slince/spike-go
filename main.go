@@ -1,8 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"time"
+	"strings"
 )
 
 
@@ -21,17 +22,14 @@ func (test Test) Run(){
 
 func main() {
 
-	ch := make(chan int)
+	reader := strings.NewReader("哈哈哈哈")
 
-	test := Test{
-		10,
-		ch,
-	}
+	reader2 := bufio.NewReader(reader)
 
-	go test.Run()
+	bytes := make([]byte, 50)
 
-	test.a = 20
-	ch <- 10
+	readedBytes, _ := reader2.Read(bytes)
 
-	time.Sleep(10)
+	fmt.Println(readedBytes)
+	fmt.Println(string(bytes))
 }

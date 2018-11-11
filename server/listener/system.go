@@ -1,10 +1,10 @@
 package listener
 
 import (
-	"github.com/slince/jinbox/event"
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server"
-	"github.com/slince/jinbox/server/handler"
+	"github.com/slince/spike-go/event"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server"
+	"github.com/slince/spike-go/server/handler"
 )
 
 func OnMessage(ev *event.Event){

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/slince/jinbox/protol"
+	"github.com/slince/spike-go/protol"
 )
 
 // 心跳包处理器

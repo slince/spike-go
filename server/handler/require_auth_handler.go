@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server"
 )
 
 type RequireAuthHandler struct {

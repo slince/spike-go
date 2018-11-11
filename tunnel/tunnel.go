@@ -82,13 +82,12 @@ func NewManyTunnels(tunnelInfos []map[string]string) []Tunnel{
 			if domainOk {
 				continue
 			}
-			tcpTunnel := TcpTunnel{
-				"",
-				localPort,
-				serverPort,
-			}
 			tunnel = &HttpTunnel{
-				tcpTunnel,
+				TcpTunnel{
+					"",
+					localPort,
+					serverPort,
+				},
 				domain,
 			}
 		}

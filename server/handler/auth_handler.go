@@ -2,8 +2,8 @@ package handler
 
 import (
 	"github.com/rs/xid"
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server"
 )
 
 // 客户端注册时消息处理器

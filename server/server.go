@@ -2,13 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/slince/jinbox/auth"
-	"github.com/slince/jinbox/event"
-	"github.com/slince/jinbox/protol"
-	"github.com/slince/jinbox/server/chunk_server"
-	"github.com/slince/jinbox/server/handler"
-	"github.com/slince/jinbox/server/listener"
-	"github.com/slince/jinbox/tunnel"
+	"github.com/slince/spike-go/auth"
+	"github.com/slince/spike-go/event"
+	"github.com/slince/spike-go/protol"
+	"github.com/slince/spike-go/server/chunk_server"
+	"github.com/slince/spike-go/server/handler"
+	"github.com/slince/spike-go/server/listener"
+	"github.com/slince/spike-go/tunnel"
 	"net"
 )
 
@@ -75,7 +75,7 @@ func (server *Server) IsTunnelRegistered(tunnel tunnel.Tunnel) bool {
 
 // find chunk server by its tunnel
 func (server *Server) FindChunkServer(id string) chunk_server.ChunkServer{
-	for _,client := range server.Clients {
+	for _, client := range server.Clients {
 		for _, chunkServer := range client.ChunkServers {
 			if chunkServer.GetTunnel().GetId() == id {
 				return chunkServer
@@ -135,8 +135,8 @@ func (server *Server) handleMessage(message *protol.Protocol) error {
 
 
 // Creates a new server.
-func NewServer(address string) *Server {
-	return &Server{
+func NewServer(address string) Server {
+	return Server{
 		address,
 		nil,
 		event.NewDispatcher(),

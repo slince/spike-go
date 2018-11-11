@@ -1,14 +1,35 @@
 package util
 
-import "io"
+import (
+	"io"
+	"os/exec"
+)
 
-func Pipe(to io.Writer, from io.Reader, bytesCopied *int64) error{
-	var err error
 
-	*bytesCopied, err = io.Copy(to, from)
+func Pipe(from io.Reader, to io.Writer) error{
 
-	if err != nil {
-		return err
-	}
+	cmd1 := exec.Command("ps", "aux")
 
+	cmd1.StdoutPipe()
+
+	var  (
+		rChannel chan []byte
+	)
+	go func() {
+		for {
+			bytes := make([]byte, 50)
+			_, err := from.Read(bytes)
+			if err != nil {
+
+			}
+			rChannel <- bytes
+		}
+	}()
+
+	go func() {
+		for {
+			data := <- rChannel
+			to.Write(data)
+		}
+	}()
 }

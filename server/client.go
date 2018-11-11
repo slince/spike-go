@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/slince/jinbox/server/chunk_server"
+	"github.com/slince/spike-go/server/chunk_server"
 	"net"
 )
 

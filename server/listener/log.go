@@ -1,8 +1,8 @@
 package listener
 
 import (
-	"github.com/slince/jinbox/event"
-	"github.com/slince/jinbox/server"
+	"github.com/slince/spike-go/event"
+	"github.com/slince/spike-go/server"
 )
 
 // When receive message.
