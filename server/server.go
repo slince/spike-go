@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/slince/spike-go/auth"
 	"github.com/slince/spike-go/event"
 	"github.com/slince/spike-go/protol"
@@ -26,13 +27,16 @@ type Server struct {
 func (server *Server) Run() {
 	// register all listeners
 	server.registerListeners()
-
 	// 监听端口
 	var err error
 	server.socket ,err = net.Listen("tcp", server.Address)
 	if err != nil {
 		panic(err.Error())
 	}
+	log.WithFields(log.Fields{
+		"animal": "walrus",
+	}).Info("A walrus appears")
+	//log.Info("The server is running...")
 	for {
 		conn, err := server.socket.Accept()
 		if err != nil {
@@ -152,4 +156,11 @@ func NewServer(address string) Server {
 		nil,
 		make(map[string]*Client, 0),
 	}
+}
+
+func init() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: false,
+		FullTimestamp: true,
+	})
 }
