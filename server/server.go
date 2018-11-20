@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/slince/spike-go/auth"
 	"github.com/slince/spike-go/event"
+	log "github.com/slince/spike-go/log"
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/tunnel"
 	"net"
@@ -158,9 +158,7 @@ func NewServer(address string) Server {
 	}
 }
 
+
 func init() {
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors: false,
-		FullTimestamp: true,
-	})
+	log.NewLogger()
 }

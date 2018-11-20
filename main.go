@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"strings"
 )
 
 
@@ -22,14 +20,35 @@ func (test Test) Run(){
 
 func main() {
 
-	reader := strings.NewReader("哈哈哈哈")
+	//reader := strings.NewReader("哈哈哈哈")
+	//
+	//reader2 := bufio.NewReader(reader)
+	//
+	//bytes := make([]byte, 50)
+	//
+	//readedBytes, _ := reader2.Read(bytes)
+	//
+	//fmt.Println(readedBytes)
+	//fmt.Println(string(bytes))
 
-	reader2 := bufio.NewReader(reader)
+	//
+	//var map1  = map[string]string{
+	//	"a": "asda",
+	//	"b": "asda",
+	//}
+	//
+	//func(map2 map[string]string){
+	//
+	//	(map2)["c"] = "12312"
+	//
+	//}(map1)
+	//
+	//fmt.Println(map1)
 
-	bytes := make([]byte, 50)
 
-	readedBytes, _ := reader2.Read(bytes)
-
-	fmt.Println(readedBytes)
-	fmt.Println(string(bytes))
+	var sl []int
+	fmt.Println(sl == nil)
+	sl = append(sl, 10)
+	sl = append(sl, 12)
+	fmt.Println(sl)
 }
