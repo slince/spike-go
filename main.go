@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -45,10 +46,37 @@ func main() {
 	//
 	//fmt.Println(map1)
 
+	//
+	//var sl []int
+	//fmt.Println(sl == nil)
+	//sl = append(sl, 10)
+	//sl = append(sl, 12)
+	//fmt.Println(sl)
 
-	var sl []int
-	fmt.Println(sl == nil)
-	sl = append(sl, 10)
-	sl = append(sl, 12)
-	fmt.Println(sl)
+
+	type Bar struct {
+		Bar1 string `json:"bar_1"`
+		Bar2 string `json:"bar_2"`
+	}
+
+	type Foo struct {
+		Bar interface{}
+	}
+
+	foo := Foo{
+		Bar: Bar{
+			Bar1: "tao",
+			Bar2: "sikai",
+		},
+	}
+	jsonS, _ := json.Marshal(foo)
+	fmt.Println(string(jsonS))
+
+	foo1 := &Foo{
+		Bar: Bar{
+
+		},
+	}
+	json.Unmarshal(jsonS, foo1)
+	fmt.Print(foo1.Bar)
 }

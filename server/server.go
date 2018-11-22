@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/slince/spike-go/auth"
 	"github.com/slince/spike-go/event"
-	log "github.com/slince/spike-go/log"
+	"github.com/slince/spike-go/log"
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/tunnel"
 	"net"
@@ -21,6 +21,10 @@ type Server struct {
 	Authentication auth.Authentication
 	// 客户端
 	Clients map[string]*Client
+	// Logger
+	Logger *log.Logger
+	//logFile
+	logFile string
 }
 
 // Run the server
@@ -33,10 +37,7 @@ func (server *Server) Run() {
 	if err != nil {
 		panic(err.Error())
 	}
-	log.WithFields(log.Fields{
-		"animal": "walrus",
-	}).Info("A walrus appears")
-	//log.Info("The server is running...")
+	server.Logger.Info("The server is running...")
 	for {
 		conn, err := server.socket.Accept()
 		if err != nil {
@@ -48,18 +49,14 @@ func (server *Server) Run() {
 }
 
 // Send message to connection
-func (server *Server) SendMessage(connection net.Conn, message *protol.Protocol) error{
-	jsonString, err := message.ToString()
-	if err != nil {
-		return err
-	}
+func (server *Server) SendMessage(connection net.Conn, message *protol.Protocol){
+	jsonString := message.ToString()
 	connection.Write([]byte(jsonString))
-	return nil
 }
 
 // Send message to client
-func (server *Server) SendMessageToClient(client *Client, message *protol.Protocol) error {
-	return server.SendMessage(client.Connection, message)
+func (server *Server) SendMessageToClient(client *Client, message *protol.Protocol) {
+	server.SendMessage(client.Connection, message)
 }
 
 // Checks whether tunnel is registered.
@@ -95,23 +92,23 @@ func (server *Server) registerListeners() {
 }
 
 // handle connection from client.
-func (server *Server) handleConnection(conn net.Conn) error{
+func (server *Server) handleConnection(conn net.Conn) {
 	// 预读多条message
 	rd := protol.NewReader(conn)
-	messages,err := rd.Read()
+	messages, err := rd.Read()
 
 	if err != nil {
-		return err
+		server.Logger.Error(err)
+		conn.Close()
 	}
 
 	for _, message := range messages {
 		err := server.handleMessage(message, conn)
 		if err != nil {
-			return err
+			server.Logger.Error(err) //消息处理失败直接关闭
+			conn.Close()
 		}
 	}
-
-	return nil
 }
 
 // Handle message
@@ -130,7 +127,8 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	if !ok {
 		ev = event.NewEvent("unknownMessage", map[string]interface{}{"message":  message})
 		server.Dispatcher.Fire(ev)
-		return fmt.Errorf("recieve a unknown message")
+		server.Logger.Warn("receive a unknown message")
+		return fmt.Errorf("receive a unknown message")
 	}
 	// 处理消息
 	if hdl, ok := hd.(MessageHandler); ok {
@@ -148,17 +146,16 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 
 
 // Creates a new server.
-func NewServer(address string) Server {
+func NewServer(address string, logFile string) Server {
+	logger := log.NewLogger()
+	logger.SetLogFile(logFile)
 	return Server{
 		address,
 		nil,
 		event.NewDispatcher(),
 		nil,
 		make(map[string]*Client, 0),
+		logger,
+		logFile,
 	}
-}
-
-
-func init() {
-	log.NewLogger()
 }

@@ -3,35 +3,50 @@ package tunnel
 type Tunnel interface {
 	//判断是否匹配指定信息
 	Match(info map[string]string) bool
-
 	//匹配两个tunnel是否相同
 	MatchTunnel(tunnel Tunnel) bool
-
 	// gets tunnel id
 	GetId() string
+	// Set id for the tunnel
+	SetId(id string)
+	// resolve the local address
+	ResolveAddress() string
 }
 
 type TcpTunnel struct {
 	Id string `json:"id"` //由服务端统一分配id
 	LocalPort string `json:"local_port"`
 	ServerPort string `json:"server_port"`
+	Host string `json:"host"`
 }
 
+// Set id for tunnel
+func (tn *TcpTunnel) SetId(id string) {
+	tn.Id = id
+}
+
+// get id
 func (tn *TcpTunnel) GetId() string {
 	return tn.Id
 }
 
+// get host
+func (tn *TcpTunnel) ResolveAddress() string {
+	return tn.Host + ":" + tn.LocalPort
+}
+
+
 func (tn *TcpTunnel) Match(info map[string]string) bool {
-	serverPort, _ := info["serverPort"]
-	localPort, _ := info["localPort"]
+	serverPort, _ := info["server_port"]
+	localPort, _ := info["local_port"]
 	return localPort == tn.LocalPort && serverPort == tn.ServerPort
 }
 
 func (tn *TcpTunnel) MatchTunnel(tunnel Tunnel) bool {
 	if tunnel, ok := tunnel.(*TcpTunnel);ok {
 		return tn.Match(map[string]string{
-			"localPort": tunnel.LocalPort,
-			"serverPort": tunnel.ServerPort,
+			"local_port": tunnel.LocalPort,
+			"server_port": tunnel.ServerPort,
 		})
 	}
 	return false
@@ -43,8 +58,8 @@ type HttpTunnel struct {
 }
 
 func (tn *HttpTunnel) Match(info map[string]string) bool {
-	serverPort, _ := info["serverPort"]
-	localPort, _ := info["localPort"]
+	serverPort, _ := info["server_port"]
+	localPort, _ := info["local_port"]
 	domain, _ := info["domain"]
 	return localPort == tn.LocalPort && serverPort == tn.ServerPort && domain == tn.Domain
 }
@@ -52,8 +67,8 @@ func (tn *HttpTunnel) Match(info map[string]string) bool {
 func (tn *HttpTunnel) MatchTunnel(tunnel Tunnel) bool {
 	if tunnel, ok := tunnel.(*HttpTunnel);ok {
 		return tn.Match(map[string]string{
-			"localPort": tunnel.LocalPort,
-			"serverPort": tunnel.ServerPort,
+			"local_port": tunnel.LocalPort,
+			"server_port": tunnel.ServerPort,
 			"domain": tunnel.Domain,
 		})
 	}
