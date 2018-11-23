@@ -144,6 +144,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 					"tunnel": tn,
 				},
 			}
+			hd.server.Logger.Warn("fail to create chunk server for the tunnel", err)
 			hd.server.SendMessage(hd.connection, msg)
 			continue
 		}
@@ -168,6 +169,7 @@ func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){
 	var chunkServer ChunkServer
 	//生成tunnel的id
 	tunnelId := xid.New().String()
+
 	switch tn := tn.(type) {
 	case *tunnel.TcpTunnel:
 		tn.Id = tunnelId

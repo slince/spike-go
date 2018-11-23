@@ -17,6 +17,7 @@ type Tunnel interface {
 
 // Tcp 隧道
 type TcpTunnel struct {
+	Protocol string `json:"protocol"`
 	Id string `json:"id"` //由服务端统一分配id
 	LocalPort string `json:"local_port"`
 	ServerPort string `json:"server_port"`
@@ -82,6 +83,7 @@ func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 		switch info["protocol"] {
 		case "tcp":
 			tunnel = &TcpTunnel{
+				Protocol: "tcp",
 				LocalPort: info["local_port"].(string),
 				ServerPort: info["server_port"].(string),
 				Host: info["host"].(string),
@@ -89,6 +91,7 @@ func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 		case "http":
 			tunnel = &HttpTunnel{
 				TcpTunnel{
+					Protocol: "http",
 					LocalPort: info["local_port"].(string),
 					ServerPort: info["server_port"].(string),
 					Host: info["host"].(string),
