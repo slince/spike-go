@@ -1,5 +1,7 @@
 package tunnel
 
+import "fmt"
+
 type Tunnel interface {
 	//判断是否匹配指定信息
 	Match(info map[string]string) bool
@@ -75,8 +77,8 @@ func (tn *HttpTunnel) MatchTunnel(tunnel Tunnel) bool {
 // Create many tunnels.
 func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 	var tunnel Tunnel
-	tunnels := make([]Tunnel, 5)
-	for _,info := range details {
+	tunnels := make([]Tunnel, len(details))
+	for index, info := range details {
 		switch info["protocol"] {
 		case "tcp":
 			tunnel = &TcpTunnel{
@@ -96,7 +98,8 @@ func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 		default:
 			continue
 		}
-		tunnels = append(tunnels, tunnel)
+		fmt.Println(index)
+		tunnels[index] = tunnel
 	}
 	return tunnels
 }

@@ -8,15 +8,13 @@ import (
 // 当收到消息时
 func OnMessage(ev *event.Event){
 	// 消息
-	msg, _ := ev.Parameters["message"].(protol.Protocol)
+	msg := ev.Parameters["message"].(*protol.Protocol)
 	// client
-	client, _ := ev.Parameters["server"].(*Client)
+	client := ev.Parameters["client"].(*Client)
 	messageFactory := MessageHandlerFactory{
 		client: client,
 	}
-
 	var handler MessageHandler
-
 	switch msg.Action {
 	case "auth_response":
 		handler = messageFactory.NewAuthResponseHandler()

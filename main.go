@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"net/http"
 )
 
 
@@ -81,33 +79,18 @@ func main() {
 	//json.Unmarshal(jsonS, foo1)
 	//fmt.Print(foo1.Bar)
 
+	//
+	//var map1 = map[string]string{
+	//	"foo": "bar",
+	//	"bar": "baz",
+	//}
+	//
+	//bytes.NewBufferString("").String()
+	//fmt.Println(map1["fooz"])
 
-	var map1 = map[string]string{
-		"foo": "bar",
-		"bar": "baz",
-	}
 
-	bytes.NewBufferString("").String()
-	fmt.Println(map1["fooz"])
-
-
-	type pTransport struct {
-		http.Transport
-		target string
-	}
-
-	X := &pTransport{
-		Transport: http.Transport{
-			DisableCompression: true,
-		},
-		target: "TEST",
-	}
-
-	X2 := &pTransport{
-		http.Transport{
-			DisableCompression: true,
-		},
-		target: “TEST”,
-	}
-
+	var sl = make([]int, 2)
+	sl = append(sl, 10)
+	//sl[0] = 10
+	fmt.Println(sl, len(sl))
 }

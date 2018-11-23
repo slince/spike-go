@@ -36,8 +36,6 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 		hd.server.SendMessage(hd.connection, msg)
 		return errors.New("bad request")
 	}
-	fmt.Println(hd.server.Authentication)
-
 	err := hd.server.Authentication.Auth(auth.(map[string]interface{}))
 	var msg *protol.Protocol
 	if err != nil {
@@ -95,45 +93,29 @@ func (hd *RequireAuthHandler) isAuthenticated(message *protol.Protocol) bool{
 	return false
 }
 
-// 注册代理消息处理器
-type RegisterProxyHandler struct{
-	RequireAuthHandler
-}
-
-func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
-	tunnelId, ok := message.Headers["tunnel-id"]
-	if !ok {
-		return fmt.Errorf("missing tunnel id")
-	}
-	chunkServer := hd.server.FindChunkServer(tunnelId)
-	if chunkServer == nil {
-		return fmt.Errorf("the chunk server %s is not found", tunnelId)
-	}
-	publicConnectionId,ok := message.Headers["public-connection-id"]
-	if !ok { //错误的注册代理协议
-		return fmt.Errorf("missing public id")
-	}
-	// set proxy connection
-	chunkServer.SetProxyConnection(publicConnectionId, hd.connection)
-	return nil
-}
-
 // 客户端注册隧道时的消息处理器
 type RegisterTunnelHandler struct{
 	RequireAuthHandler
 }
 
 func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
+
+	if !hd.isAuthenticated(message) {
+		return errors.New("the client is not authorized")
+	}
+
 	tunnelsInfo, ok := message.Body["tunnels"]
 	if !ok {
-		return fmt.Errorf("missing tunnel info")
+		return errors.New("missing tunnel info")
 	}
-	tunnelsInfoValue, ok := tunnelsInfo.([]map[string]interface{})
-	if !ok {
-		return fmt.Errorf("error tunnel info")
+	infos := tunnelsInfo.([]interface{})
+	var details = make([]map[string]interface{}, len(infos))
+	for idx,info := range infos{
+		details[idx] = info.(map[string]interface{})
 	}
+
 	//创建tunnel
-	tunnels := tunnel.NewManyTunnels(tunnelsInfoValue)
+	tunnels := tunnel.NewManyTunnels(details)
 	registeredTunnels := make([]tunnel.Tunnel, 0)
 
 	var chunkServers = make([]ChunkServer, len(tunnels))
@@ -148,7 +130,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 					"tunnel": tn,
 				},
 			}
-			go hd.server.SendMessage(hd.connection, msg)
+			hd.server.SendMessage(hd.connection, msg)
 			continue
 		}
 		//创建对应的chunk server
@@ -162,7 +144,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 					"tunnel": tn,
 				},
 			}
-			go hd.server.SendMessage(hd.connection, msg)
+			hd.server.SendMessage(hd.connection, msg)
 			continue
 		}
 		registeredTunnels = append(registeredTunnels, tn)
@@ -176,7 +158,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 		Headers: map[string]string{"code": "200"},
 		Body: map[string]interface{}{"tunnels": registeredTunnels},
 	}
-	go hd.server.SendMessage(hd.connection, msg)
+	hd.server.SendMessage(hd.connection, msg)
 
 	return nil
 }
@@ -206,6 +188,32 @@ func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){
 	return chunkServer,nil
 }
 
+// 注册代理消息处理器
+type RegisterProxyHandler struct{
+	RequireAuthHandler
+}
+
+func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
+	if !hd.isAuthenticated(message) {
+		return errors.New("the client is not authorized")
+	}
+
+	tunnelId, ok := message.Headers["tunnel-id"]
+	if !ok {
+		return fmt.Errorf("missing tunnel id")
+	}
+	chunkServer := hd.server.FindChunkServer(tunnelId)
+	if chunkServer == nil {
+		return fmt.Errorf("the chunk server %s is not found", tunnelId)
+	}
+	publicConnectionId,ok := message.Headers["public-connection-id"]
+	if !ok { //错误的注册代理协议
+		return fmt.Errorf("missing public id")
+	}
+	// set proxy connection
+	chunkServer.SetProxyConnection(publicConnectionId, hd.connection)
+	return nil
+}
 
 // 消息处理器创建工厂
 type MessageHandlerFactory struct {

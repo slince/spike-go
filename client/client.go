@@ -56,6 +56,17 @@ func (client *Client) Close() {
 
 }
 
+// 发送消息给服务端
+func (client *Client) SendMessage(message *protol.Protocol) (int, error){
+	if client.Id != "" {
+		if message.Headers == nil {
+			message.Headers = make(map[string]string, 1)
+		}
+		message.Headers["client-id"] = client.Id
+	}
+	return client.ControlConn.Write(message.ToBytes())
+}
+
 // Register all listeners
 func (client *Client) registerListeners() {
 	// 注册系统监听者
@@ -75,6 +86,7 @@ func (client *Client) handleControlConnection() {
 			client.Logger.Error(err) //忽略读取
 		}
 		for _, message := range messages {
+			client.Logger.Info("Received a message:\r\n" + message.ToString())
 			client.handleMessage(message)
 		}
 	}
@@ -83,12 +95,11 @@ func (client *Client) handleControlConnection() {
 // 处理消息
 func (client *Client) handleMessage(message *protol.Protocol) error {
 	// fire event
-	ev := event.NewEvent("message", map[string]interface{}{
+	ev := event.NewEvent(EventMessage, map[string]interface{}{
 		"message":  message,
 		"client": client,
 	})
 	client.Dispatcher.Fire(ev)
-
 	// 获取handler
 	hd, ok := ev.Parameters["handler"]
 	// 收到不知名的报文
@@ -99,14 +110,9 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 		return fmt.Errorf("receive a unknown message")
 	}
 	// 处理消息
-	if hdl, ok := hd.(MessageHandler); ok {
-		err := hdl.Handle(message)
-		// 有处理错误直接关闭
-		if err != nil {
-			client.ControlConn.Write([]byte(err.Error()))
-			client.ControlConn.Close()
-		}
-
+	err := hd.(MessageHandler).Handle(message)
+	if err != nil {
+		client.Logger.Warn("bad response from the server")
 	}
 	return nil
 }
@@ -151,8 +157,6 @@ func NewClient(configuration *Configuration) *Client {
 
 // 创建tunnel
 func createTunnelsWithTunnelConfiguration(configurations []TunnelConfiguration) []tunnel.Tunnel{
-	fmt.Println(configurations)
-
 	var details []map[string]interface{}
 	for _, config := range configurations {
 		details = append(details, map[string]interface{}{

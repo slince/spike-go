@@ -21,19 +21,15 @@ type AuthResponseHandler struct {
 }
 
 func (hd *AuthResponseHandler) Handle(message *protol.Protocol) error{
-	code, ok := message.Headers["code"]
-	if !ok || code != "200" {
+	if message.Headers["code"] != "200" {
 		hd.client.Close() // 关闭客户端
 		return errors.New("auth error")
 	}
-	client,_ := message.Body["client"]
-	if cl,ok :=client.(map[string]string);ok {
-		clientId,_ := cl["id"]
-		hd.client.Id = clientId
-		hd.registerTunnel() // 验证成功以后注册隧道
-		return nil
-	}
-	return errors.New("bad message body")
+	client := message.Body["client"].(map[string]interface{})
+	hd.client.Id = client["id"].(string)
+
+	hd.registerTunnel() // 验证成功以后注册隧道
+	return nil
 }
 
 // 注册所有的隧道到服务器
@@ -44,7 +40,9 @@ func (hd *AuthResponseHandler) registerTunnel() {
 			"tunnels": hd.client.Tunnels,
 		},
 	}
-	hd.client.ControlConn.Write(message.ToBytes())
+	fmt.Println(hd.client.Tunnels,len(hd.client.Tunnels), cap(hd.client.Tunnels))
+	bytes, err := hd.client.SendMessage(message)
+	fmt.Println(bytes, err)
 }
 
 // 注册隧道信息返回处理

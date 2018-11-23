@@ -92,23 +92,23 @@ func (server *Server) registerListeners() {
 
 // handle connection from client.
 func (server *Server) handleConnection(conn net.Conn) {
+
 	server.Logger.Info("Accepted a connection.")
-
 	// 预读多条message
-	rd := protol.NewReader(conn)
-	messages, err := rd.Read()
-
-	if err != nil {
-		server.Logger.Error(err)
-		conn.Close()
-	}
-
-	for _, message := range messages {
-		server.Logger.Info("Received a message:\r\n" + message.ToString())
-		err := server.handleMessage(message, conn)
-		if err != nil {
-			server.Logger.Error(err) //消息处理失败直接关闭
-			conn.Close()
+	reader := protol.NewReader(conn)
+	for {
+		messages, err := reader.Read()
+		if err != nil { //如果读取失败跳过本次读取
+			server.Logger.Error(err)
+			continue
+		}
+		for _, message := range messages {
+			server.Logger.Info("Received a message:\r\n" + message.ToString())
+			err := server.handleMessage(message, conn)
+			if err != nil {
+				server.Logger.Error(err) //消息处理失败直接关闭
+				conn.Close()
+			}
 		}
 	}
 }
@@ -136,7 +136,7 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	err := hd.(MessageHandler).Handle(message)
 	// 有处理错误直接关闭
 	if err != nil {
-		server.Logger.Warn("error when handle message")
+		server.Logger.Warn(err)
 		conn.Write([]byte(err.Error()))
 		conn.Close()
 	}
