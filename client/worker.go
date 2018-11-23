@@ -45,13 +45,11 @@ func (worker *TcpWorker) Start() error{
 
 }
 
-func (worker *TcpWorker) createConnector() (net.Conn,error) {
+func (worker *TcpWorker) createConnector() (net.Conn, error) {
 	conn, err := net.Dial("tcp", worker.Client.ServerAddress)
-
 	if err != nil {
 		return conn, err
 	}
-
 	message := &protol.Protocol{
 		Action: "register_proxy",
 		Headers: map[string]string{
@@ -59,6 +57,7 @@ func (worker *TcpWorker) createConnector() (net.Conn,error) {
 		},
 	}
 	conn.Write(message.ToBytes())
+	return conn, nil
 }
 
 

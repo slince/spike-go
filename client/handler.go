@@ -41,10 +41,10 @@ func (hd *AuthResponseHandler) registerTunnel() {
 	message := &protol.Protocol{
 		Action: "register_tunnel",
 		Body: map[string]interface{}{
-			"tunnels": hd.client.tunnels,
+			"tunnels": hd.client.Tunnels,
 		},
 	}
-	hd.client.controlConn.Write(message.ToBytes())
+	hd.client.ControlConn.Write(message.ToBytes())
 }
 
 // 注册隧道信息返回处理
@@ -64,7 +64,7 @@ func (hd *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error 
 	if regTunnels, ok2 := registeredTunnels.([]map[string]string); ok2 {
 		for _, registeredTunnel := range regTunnels{
 			targetTunnelId, _ := registeredTunnel["id"]
-			for _, tunnel := range hd.client.tunnels {
+			for _, tunnel := range hd.client.Tunnels {
 				if tunnel.Match(registeredTunnel) {
 					tunnel.SetId(targetTunnelId)
 				}
@@ -80,10 +80,11 @@ func (hd *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error 
 type RequestProxyHandler struct {
 	Handler
 }
+
 func (hd *RequestProxyHandler) Handle(message *protol.Protocol) error {
 	tunnelId, ok := message.Headers["tunnel-id"]
-	publicConnId, publicConnnIdOk := message.Headers["public-connection-id"]
-	if !ok || !publicConnnIdOk {
+	publicConnId, publicConnIdOk := message.Headers["public-connection-id"]
+	if !ok || !publicConnIdOk {
 		return errors.New("missing tunnel id or public connection id")
 	}
 	tunnel,err := hd.client.findTunnelById(tunnelId)
@@ -101,4 +102,32 @@ func (hd *RequestProxyHandler) Handle(message *protol.Protocol) error {
 		hd.client.Logger.Error("fail to create worker for request_proxy message")
 	}
 	return nil
+}
+
+// handler工厂方法
+type MessageHandlerFactory struct {
+	client *Client
+}
+
+func (factory MessageHandlerFactory) newHandler() Handler{
+	return Handler{
+		client: factory.client,
+	}
+}
+
+func (factory MessageHandlerFactory) NewAuthResponseHandler() MessageHandler{
+	return &AuthResponseHandler{
+		factory.newHandler(),
+	}
+}
+func (factory MessageHandlerFactory) NewRegisterTunnelResponseHandler() MessageHandler{
+	return &RegisterTunnelResponseHandler{
+		factory.newHandler(),
+	}
+}
+
+func (factory MessageHandlerFactory) NewRequestProxyHandler() MessageHandler{
+	return &RequestProxyHandler{
+		factory.newHandler(),
+	}
 }

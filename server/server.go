@@ -146,10 +146,10 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 
 
 // Creates a new server.
-func NewServer(address string, logFile string) Server {
+func NewServer(address string, logFile string) *Server {
 	logger := log.NewLogger()
-	logger.SetLogFile(logFile)
-	return Server{
+	logger.SetLogFile(logFile).EnableConsole() //开启文件日志和控制台日志
+	return &Server{
 		address,
 		nil,
 		event.NewDispatcher(),

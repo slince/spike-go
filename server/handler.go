@@ -115,7 +115,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 	if !ok {
 		return fmt.Errorf("missing tunnel info")
 	}
-	tunnelsInfoValue, ok := tunnelsInfo.([]map[string]string)
+	tunnelsInfoValue, ok := tunnelsInfo.([]map[string]interface{})
 	if !ok {
 		return fmt.Errorf("error tunnel info")
 	}
@@ -167,7 +167,6 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 
 	return nil
 }
-
 
 // 创建chunk server
 func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){

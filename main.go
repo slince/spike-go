@@ -1,8 +1,9 @@
 package main
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
+	"net/http"
 )
 
 
@@ -53,30 +54,60 @@ func main() {
 	//sl = append(sl, 12)
 	//fmt.Println(sl)
 
+	//
+	//type Bar struct {
+	//	Bar1 string `json:"bar_1"`
+	//	Bar2 string `json:"bar_2"`
+	//}
+	//
+	//type Foo struct {
+	//	Bar interface{}
+	//}
+	//
+	//foo := Foo{
+	//	Bar: Bar{
+	//		Bar1: "tao",
+	//		Bar2: "sikai",
+	//	},
+	//}
+	//jsonS, _ := json.Marshal(foo)
+	//fmt.Println(string(jsonS))
+	//
+	//foo1 := &Foo{
+	//	Bar: Bar{
+	//
+	//	},
+	//}
+	//json.Unmarshal(jsonS, foo1)
+	//fmt.Print(foo1.Bar)
 
-	type Bar struct {
-		Bar1 string `json:"bar_1"`
-		Bar2 string `json:"bar_2"`
+
+	var map1 = map[string]string{
+		"foo": "bar",
+		"bar": "baz",
 	}
 
-	type Foo struct {
-		Bar interface{}
+	bytes.NewBufferString("").String()
+	fmt.Println(map1["fooz"])
+
+
+	type pTransport struct {
+		http.Transport
+		target string
 	}
 
-	foo := Foo{
-		Bar: Bar{
-			Bar1: "tao",
-			Bar2: "sikai",
+	X := &pTransport{
+		Transport: http.Transport{
+			DisableCompression: true,
 		},
+		target: "TEST",
 	}
-	jsonS, _ := json.Marshal(foo)
-	fmt.Println(string(jsonS))
 
-	foo1 := &Foo{
-		Bar: Bar{
-
+	X2 := &pTransport{
+		http.Transport{
+			DisableCompression: true,
 		},
+		target: “TEST”,
 	}
-	json.Unmarshal(jsonS, foo1)
-	fmt.Print(foo1.Bar)
+
 }

@@ -14,6 +14,10 @@ import (
 // 初始化常量
 const (
 	Version = "0.0.1"
+	EventClientInit = "init"
+	EventClientStart = "start"
+	EventMessage = "message"
+	EventUnknownMessage = "unknownMessage"
 )
 
 type Client struct {
@@ -24,23 +28,26 @@ type Client struct {
 	// Logger
 	Logger *log.Logger
 	// identifier
-	Auth map[string]interface{}
+	Auth map[string]string
 	// Tunnels
-	tunnels []tunnel.Tunnel
+	Tunnels []tunnel.Tunnel
 	// 控制连接
-	controlConn net.Conn
+	ControlConn net.Conn
 	// event dispatcher
 	Dispatcher *event.Dispatcher
 }
 
 // Run client
 func (client *Client) Start() {
+	client.registerListeners()
+
 	conn,err := net.Dial("tcp", client.ServerAddress)
 	if err != nil {
 		panic(err)
 	}
 	client.Logger.Info("the client has been connected to the server")
-	client.controlConn = conn
+	client.ControlConn = conn
+
 	client.handleControlConnection()
 }
 
@@ -49,11 +56,17 @@ func (client *Client) Close() {
 
 }
 
+// Register all listeners
+func (client *Client) registerListeners() {
+	// 注册系统监听者
+	RegisterSystemListener(client.Dispatcher)
+}
+
 // 处理控制连接
 func (client *Client) handleControlConnection() {
 	// 第一步获取授权
 	client.sendAuthRequest()
-	reader := protol.NewReader(client.controlConn)
+	reader := protol.NewReader(client.ControlConn)
 
 	for {
 		// 监听消息
@@ -90,8 +103,8 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 		err := hdl.Handle(message)
 		// 有处理错误直接关闭
 		if err != nil {
-			client.controlConn.Write([]byte(err.Error()))
-			client.controlConn.Close()
+			client.ControlConn.Write([]byte(err.Error()))
+			client.ControlConn.Close()
 		}
 
 	}
@@ -100,9 +113,9 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 
 // find tunnel by id
 func (client *Client) findTunnelById(id string) (tunnel.Tunnel, error) {
-	for _, tunnel := range client.tunnels {
-		if tunnel.GetId() == id {
-			return tunnel, nil
+	for _, tn := range client.Tunnels {
+		if tn.GetId() == id {
+			return tn, nil
 		}
 	}
 	return nil, errors.New("The tunnel is missing with id")
@@ -118,16 +131,34 @@ func (client *Client) sendAuthRequest() {
 			"auth": client.Auth,
 		},
 	}
-	client.controlConn.Write([]byte(message.ToString()))
+	client.ControlConn.Write([]byte(message.ToString()))
 }
 
-func NewClient(ServerAddress string, tunnels []tunnel.Tunnel, LogFile string) *Client {
+func NewClient(configuration *Configuration) *Client {
+	// set logger
 	logger := log.NewLogger()
-	logger.SetLogFile(LogFile)
+	logger.SetLogFile(configuration.Log["file"]).EnableConsole()
+	tunnels := createTunnelsWithTunnelConfiguration(configuration.Tunnels)
 	return &Client{
-		ServerAddress,
-		logger,
-		tunnels,
+		Id: "",
+		ServerAddress: configuration.ServerAddress,
+		Logger: logger,
+		Auth: configuration.Auth,
+		Tunnels: tunnels,
 		Dispatcher: event.NewDispatcher(),
 	}
+}
+
+// 创建tunnel
+func createTunnelsWithTunnelConfiguration(configurations []TunnelConfiguration) []tunnel.Tunnel{
+	var details []map[string]interface{}
+	for _, config := range configurations {
+		details = append(details, map[string]interface{}{
+			"protocol": config.Protocol,
+			"local_port": config.LocalPort,
+			"Host": config.Host,
+			"proxy_hosts": config.ProxyHosts,
+		})
+	}
+	return tunnel.NewManyTunnels(details)
 }

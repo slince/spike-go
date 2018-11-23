@@ -16,14 +16,15 @@ func NewLogger() *Logger{
 }
 
 // Enable console output
-func (logger *Logger) EnableConsole() {
+func (logger *Logger) EnableConsole() *Logger{
 	var logrus = logrus.New()
 	logrus.Out = os.Stdout
 	logger.loggers = append(logger.loggers, logrus)
+	return logger
 }
 
 // Enable log file
-func (logger *Logger) SetLogFile(logfile string){
+func (logger *Logger) SetLogFile(logfile string) *Logger{
 	file, err := os.OpenFile(logfile, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
@@ -31,6 +32,7 @@ func (logger *Logger) SetLogFile(logfile string){
 	logrus := logrus.New()
 	logrus.Out = file
 	logger.loggers = append(logger.loggers, logrus)
+	return logger
 }
 
 // Trace logs a message at level Trace on the standard logger.

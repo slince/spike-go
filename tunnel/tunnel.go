@@ -13,6 +13,7 @@ type Tunnel interface {
 	ResolveAddress() string
 }
 
+// Tcp 隧道
 type TcpTunnel struct {
 	Id string `json:"id"` //由服务端统一分配id
 	LocalPort string `json:"local_port"`
@@ -35,10 +36,9 @@ func (tn *TcpTunnel) ResolveAddress() string {
 	return tn.Host + ":" + tn.LocalPort
 }
 
-
 func (tn *TcpTunnel) Match(info map[string]string) bool {
-	serverPort, _ := info["server_port"]
-	localPort, _ := info["local_port"]
+	serverPort := info["server_port"]
+	localPort := info["local_port"]
 	return localPort == tn.LocalPort && serverPort == tn.ServerPort
 }
 
@@ -52,16 +52,14 @@ func (tn *TcpTunnel) MatchTunnel(tunnel Tunnel) bool {
 	return false
 }
 
+// Http 隧道
 type HttpTunnel struct {
 	TcpTunnel
-	Domain string `json:"domain"`
+	ProxyHosts map[string]string
 }
 
 func (tn *HttpTunnel) Match(info map[string]string) bool {
-	serverPort, _ := info["server_port"]
-	localPort, _ := info["local_port"]
-	domain, _ := info["domain"]
-	return localPort == tn.LocalPort && serverPort == tn.ServerPort && domain == tn.Domain
+	return info["local_port"] == tn.LocalPort && info["server_port"] == tn.ServerPort
 }
 
 func (tn *HttpTunnel) MatchTunnel(tunnel Tunnel) bool {
@@ -69,42 +67,34 @@ func (tn *HttpTunnel) MatchTunnel(tunnel Tunnel) bool {
 		return tn.Match(map[string]string{
 			"local_port": tunnel.LocalPort,
 			"server_port": tunnel.ServerPort,
-			"domain": tunnel.Domain,
 		})
 	}
 	return false
 }
 
 // Create many tunnels.
-func NewManyTunnels(tunnelInfos []map[string]string) []Tunnel{
-
+func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 	var tunnel Tunnel
-
 	tunnels := make([]Tunnel, 5)
-	for _,info := range tunnelInfos {
-		tp,_ := info["type"]
-		localPort,_ := info["local_port"]
-		serverPort,_ := info["server_port"]
-		if tp == "tcp" {
+	for _,info := range details {
+		switch info["protocol"] {
+		case "tcp":
 			tunnel = &TcpTunnel{
-				"",
-				localPort,
-				serverPort,
+				LocalPort: info["local_port"].(string),
+				ServerPort: info["server_port"].(string),
+				Host: info["Host"].(string),
 			}
-		} else {
-			// http tunnel 必须绑定域名
-			domain,domainOk := info["domain"]
-			if domainOk {
-				continue
-			}
+		case "http":
 			tunnel = &HttpTunnel{
 				TcpTunnel{
-					"",
-					localPort,
-					serverPort,
+					LocalPort: info["local_port"].(string),
+					ServerPort: info["server_port"].(string),
+					Host: info["Host"].(string),
 				},
-				domain,
+				info["proxy_hosts"].(map[string]string),
 			}
+		default:
+			continue
 		}
 		tunnels = append(tunnels, tunnel)
 	}

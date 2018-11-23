@@ -1,0 +1,18 @@
+{
+  "server-address": "127.0.0.1:8090",
+  "tunnels": [
+    {
+      "protocol": "tcp",
+      "serverPort": "8086",
+      "host": "127.0.0.1:3306"
+    }
+  ],
+  "log": {
+    "file": "./client.log",
+    "level": "info"
+  },
+  "auth": {
+    "username": "spike",
+    "password": "spike"
+  }
+}
