@@ -82,14 +82,14 @@ func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 			tunnel = &TcpTunnel{
 				LocalPort: info["local_port"].(string),
 				ServerPort: info["server_port"].(string),
-				Host: info["Host"].(string),
+				Host: info["host"].(string),
 			}
 		case "http":
 			tunnel = &HttpTunnel{
 				TcpTunnel{
 					LocalPort: info["local_port"].(string),
 					ServerPort: info["server_port"].(string),
-					Host: info["Host"].(string),
+					Host: info["host"].(string),
 				},
 				info["proxy_hosts"].(map[string]string),
 			}

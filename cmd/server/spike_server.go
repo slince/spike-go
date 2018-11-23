@@ -6,6 +6,6 @@ import (
 
 func main() {
 	var ser *server.Server
-	ser = server.NewServer("0.0.0.0:8088", "./spike.log")
+	ser = server.NewServer("127.0.0.1:8090", "./spike.log")
 	ser.Run()
 }

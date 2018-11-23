@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rs/xid"
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/tunnel"
@@ -25,8 +26,19 @@ type AuthHandler struct{
 
 func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 	//验证客户端凭证
-	err := hd.server.Authentication.Auth(message.Body)
+	auth, ok := message.Body["auth"]
+	if !ok {
+		msg := &protol.Protocol{
+			Action: "auth_response",
+			Headers: map[string]string{"code": "403"},
+			Body: map[string]interface{}{"error": "bad request"},
+		}
+		hd.server.SendMessage(hd.connection, msg)
+		return errors.New("bad request")
+	}
+	fmt.Println(hd.server.Authentication)
 
+	err := hd.server.Authentication.Auth(auth.(map[string]interface{}))
 	var msg *protol.Protocol
 	if err != nil {
 		msg = &protol.Protocol{
@@ -56,11 +68,12 @@ type PingHandler struct{
 	Handler
 }
 
-func (hd *PingHandler) Handle(message *protol.Protocol){
+func (hd *PingHandler) Handle(message *protol.Protocol) error{
 	msg := &protol.Protocol{
 		Action: "pong",
 	}
 	hd.server.SendMessage(hd.connection, msg)
+	return nil
 }
 
 
@@ -210,6 +223,14 @@ func (factory MessageHandlerFactory) newHandler() Handler{
 func (factory MessageHandlerFactory) NewAuthHandler() MessageHandler{
 	var handler MessageHandler
 	handler = &AuthHandler{
+		factory.newHandler(),
+	}
+	return handler
+}
+
+func (factory MessageHandlerFactory) NewPingHandler() MessageHandler{
+	var handler MessageHandler
+	handler = &PingHandler{
 		factory.newHandler(),
 	}
 	return handler

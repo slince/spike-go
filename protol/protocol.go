@@ -22,9 +22,7 @@ func (protocol *Protocol) ToString() string {
 
 // Create protocol from json string.
 func FromJsonString(jsonString string) (*Protocol,error){
-
 	protocol := &Protocol{}
-
 	err := json.Unmarshal([]byte(jsonString), protocol)
 
 	if err != nil {

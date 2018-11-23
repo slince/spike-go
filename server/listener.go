@@ -22,25 +22,21 @@ func RegisterLogListeners(dispatcher *event.Dispatcher) {
 // 当收到消息时
 func OnMessage(ev *event.Event){
 	// 消息
-	message, _ := ev.Parameters["message"]
-	msg, _ := message.(protol.Protocol)
+	msg := ev.Parameters["message"].(*protol.Protocol)
 	// server
-	server, _ := ev.Parameters["server"]
-	ser, _ := server.(*Server)
+	ser := ev.Parameters["server"].(*Server)
 	// connection
-	connection, _ := ev.Parameters["connection"]
-	conn, _ := connection.(net.Conn)
-
+	conn := ev.Parameters["connection"].(net.Conn)
 	messageFactory := MessageHandlerFactory{
 		Server: ser,
 		Conn: conn,
 	}
-
 	var handler MessageHandler
-
 	switch msg.Action {
-	case "register":
+	case "auth":
 		handler = messageFactory.NewAuthHandler()
+	case "ping":
+		handler = messageFactory.NewPingHandler()
 	case "register_tunnel":
 		handler = messageFactory.NewRegisterTunnelHandler()
 	case "register_proxy":

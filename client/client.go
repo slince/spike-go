@@ -151,12 +151,15 @@ func NewClient(configuration *Configuration) *Client {
 
 // 创建tunnel
 func createTunnelsWithTunnelConfiguration(configurations []TunnelConfiguration) []tunnel.Tunnel{
+	fmt.Println(configurations)
+
 	var details []map[string]interface{}
 	for _, config := range configurations {
 		details = append(details, map[string]interface{}{
 			"protocol": config.Protocol,
 			"local_port": config.LocalPort,
-			"Host": config.Host,
+			"server_port": config.ServerPort,
+			"host": config.Host,
 			"proxy_hosts": config.ProxyHosts,
 		})
 	}

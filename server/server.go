@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/slince/spike-go/auth"
 	"github.com/slince/spike-go/event"
 	"github.com/slince/spike-go/log"
 	"github.com/slince/spike-go/protol"
@@ -18,7 +17,7 @@ type Server struct {
 	//事件处理器
 	Dispatcher *event.Dispatcher
 	//验证对象
-	Authentication auth.Authentication
+	Authentication Authentication
 	// 客户端
 	Clients map[string]*Client
 	// Logger
@@ -93,6 +92,8 @@ func (server *Server) registerListeners() {
 
 // handle connection from client.
 func (server *Server) handleConnection(conn net.Conn) {
+	server.Logger.Info("Accepted a connection.")
+
 	// 预读多条message
 	rd := protol.NewReader(conn)
 	messages, err := rd.Read()
@@ -103,6 +104,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 	}
 
 	for _, message := range messages {
+		server.Logger.Info("Received a message:\r\n" + message.ToString())
 		err := server.handleMessage(message, conn)
 		if err != nil {
 			server.Logger.Error(err) //消息处理失败直接关闭
@@ -131,15 +133,12 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 		return fmt.Errorf("receive a unknown message")
 	}
 	// 处理消息
-	if hdl, ok := hd.(MessageHandler); ok {
-		err := hdl.Handle(message)
-
-		// 有处理错误直接关闭
-		if err != nil {
-			conn.Write([]byte(err.Error()))
-			conn.Close()
-		}
-
+	err := hd.(MessageHandler).Handle(message)
+	// 有处理错误直接关闭
+	if err != nil {
+		server.Logger.Warn("error when handle message")
+		conn.Write([]byte(err.Error()))
+		conn.Close()
 	}
 	return nil
 }
@@ -153,7 +152,7 @@ func NewServer(address string, logFile string) *Server {
 		address,
 		nil,
 		event.NewDispatcher(),
-		nil,
+		NewSimplePasswordAuth("spike", "spike"),
 		make(map[string]*Client, 0),
 		logger,
 		logFile,
