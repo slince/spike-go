@@ -89,7 +89,7 @@ func main() {
 	//fmt.Println(map1["fooz"])
 
 
-	var sl = make([]int, 2)
+	var sl []int
 	sl = append(sl, 10)
 	//sl[0] = 10
 	fmt.Println(sl, len(sl))

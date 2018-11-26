@@ -7,9 +7,12 @@ import (
 func main() {
 
 	var clt *client.Client
-	var cfg *client.Configuration
+	cfg,err := client.CreateConfigurationFromFile("./spike.json")
 
-	cfg,_ = client.CreateConfigurationFromFile("./spike.json")
+	if err != nil {
+		panic(err)
+	}
+
 	clt = client.NewClient(cfg)
 	clt.Start()
 }

@@ -68,6 +68,10 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 	delete(chunkServer.pubConnCollection, pubConn.Id)
 }
 
+func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{
+	return chunkServer.Tunnel
+}
+
 // 设置代理链接
 func (chunkServer *TcpChunkServer) SetProxyConnection(pubConnId string, conn net.Conn) error{
 
@@ -78,9 +82,6 @@ func (chunkServer *TcpChunkServer) SetProxyConnection(pubConnId string, conn net
 	return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
 }
 
-func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{
-	return chunkServer.Tunnel
-}
 
 // http chunk server
 type HttpChunkServer struct {

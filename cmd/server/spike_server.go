@@ -6,6 +6,10 @@ import (
 
 func main() {
 	var ser *server.Server
-	ser = server.NewServer("127.0.0.1:8090", "./spike.log")
+	cfg,err := server.CreateConfigurationFromFile("./spiked.json")
+	if err != nil {
+		panic(err)
+	}
+	ser = server.NewServer(cfg)
 	ser.Run()
 }

@@ -1,0 +1,11 @@
+{
+  "address": "0.0.0.0:8090",
+  "log": {
+    "file": "./spiked.log"
+  },
+  "auth": {
+    "type": "simple_password",
+    "username": "spike",
+    "password": "spike"
+  }
+}

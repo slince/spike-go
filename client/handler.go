@@ -40,9 +40,7 @@ func (hd *AuthResponseHandler) registerTunnel() {
 			"tunnels": hd.client.Tunnels,
 		},
 	}
-	fmt.Println(hd.client.Tunnels,len(hd.client.Tunnels), cap(hd.client.Tunnels))
-	bytes, err := hd.client.SendMessage(message)
-	fmt.Println(bytes, err)
+	hd.client.SendMessage(message)
 }
 
 // 注册隧道信息返回处理
@@ -52,20 +50,22 @@ type RegisterTunnelResponseHandler struct {
 
 func (hd *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error {
 	if code,ok := message.Headers["code"]; !ok || code != "200" {
-		tunnel, _ := message.Body["tunnel"]
-		targetTunnel, _ := tunnel.(map[string]string)
-		serverPort, _ := targetTunnel["server_port"]
-		return fmt.Errorf(`the tunnle with serverport "%s" register tunnel error`, serverPort)
+		targetTunnel := message.Body["tunnel"].(map[string]interface{})
+		serverPort := targetTunnel["server_port"].(string)
+		return fmt.Errorf(`register the tunnle with serverport "%s" error`, serverPort)
 	}
 
-	registeredTunnels, _ := message.Body["tunnels"]
-	if regTunnels, ok2 := registeredTunnels.([]map[string]string); ok2 {
-		for _, registeredTunnel := range regTunnels{
-			targetTunnelId, _ := registeredTunnel["id"]
-			for _, tunnel := range hd.client.Tunnels {
-				if tunnel.Match(registeredTunnel) {
-					tunnel.SetId(targetTunnelId)
-				}
+	// 注册隧道id
+	regTunnels := message.Body["tunnels"].([]interface{})
+	for _, regTunnel := range regTunnels{
+		regTunnelInfo := regTunnel.(map[string]interface{})
+		info := make(map[string]string, len(regTunnelInfo))
+		for key, val := range regTunnelInfo {
+			info[key] = val.(string)
+		}
+		for _, tunnel := range hd.client.Tunnels { //找到本地tunnel，修改tunnel id
+			if tunnel.Match(info) {
+				tunnel.SetId(info["id"])
 			}
 		}
 	}

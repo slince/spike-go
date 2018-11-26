@@ -1,7 +1,5 @@
 package tunnel
 
-import "fmt"
-
 type Tunnel interface {
 	//判断是否匹配指定信息
 	Match(info map[string]string) bool
@@ -101,7 +99,6 @@ func NewManyTunnels(details []map[string]interface{}) []Tunnel{
 		default:
 			continue
 		}
-		fmt.Println(index)
 		tunnels[index] = tunnel
 	}
 	return tunnels

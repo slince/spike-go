@@ -99,7 +99,6 @@ type RegisterTunnelHandler struct{
 }
 
 func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
-
 	if !hd.isAuthenticated(message) {
 		return errors.New("the client is not authorized")
 	}
@@ -117,8 +116,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 	//创建tunnel
 	tunnels := tunnel.NewManyTunnels(details)
 	registeredTunnels := make([]tunnel.Tunnel, 0)
-
-	var chunkServers = make([]ChunkServer, len(tunnels))
+	var chunkServers = make([]ChunkServer, 0)
 	for _,tn := range tunnels {
 		//如果tunnel已经注册则拒绝再次注册
 		if hd.server.IsTunnelRegistered(tn) {
@@ -151,17 +149,25 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 		registeredTunnels = append(registeredTunnels, tn)
 		chunkServers = append(chunkServers, chunkServer)
 	}
-	//追加入客户端的chunk servers
-	hd.client.ChunkServers = append(hd.client.ChunkServers, chunkServers...)
-	//注册成功的客户端
-	msg := &protol.Protocol{
-		Action: "register_tunnel_response",
-		Headers: map[string]string{"code": "200"},
-		Body: map[string]interface{}{"tunnels": registeredTunnels},
-	}
-	hd.server.SendMessage(hd.connection, msg)
+	//如果有成功
+	if len(registeredTunnels) > 0 {
+		//追加入客户端的chunk servers,
+		hd.client.ChunkServers = append(hd.client.ChunkServers, chunkServers...)
+		for _, chunkServer := range chunkServers {
+			hd.server.chunkServerChain <-chunkServer
+		}
+		//注册成功的客户端
+		msg := &protol.Protocol{
+			Action: "register_tunnel_response",
+			Headers: map[string]string{"code": "200"},
+			Body: map[string]interface{}{"tunnels": registeredTunnels},
+		}
 
-	return nil
+		hd.server.SendMessage(hd.connection, msg)
+		return nil
+	} else {
+		return errors.New("no tunnel is registered")
+	}
 }
 
 // 创建chunk server

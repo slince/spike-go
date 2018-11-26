@@ -12,8 +12,6 @@ import (
 type Server struct {
 	//绑定的地址
 	Address string
-	//控制套接字
-	socket net.Listener
 	//事件处理器
 	Dispatcher *event.Dispatcher
 	//验证对象
@@ -22,8 +20,8 @@ type Server struct {
 	Clients map[string]*Client
 	// Logger
 	Logger *log.Logger
-	//logFile
-	logFile string
+	// chunk server chain
+	chunkServerChain chan ChunkServer
 }
 
 // Run the server
@@ -32,18 +30,27 @@ func (server *Server) Run() {
 	server.registerListeners()
 	// 监听端口
 	var err error
-	server.socket ,err = net.Listen("tcp", server.Address)
+	listener ,err := net.Listen("tcp", server.Address)
 	if err != nil {
 		panic(err.Error())
 	}
 	server.Logger.Info("The server is running...")
 	for {
-		conn, err := server.socket.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
 			// handle error
 			continue
 		}
 		go server.handleConnection(conn)
+	}
+	go server.runChunkServer() // 启动chunk server
+}
+
+// 启动所有
+func (server *Server) runChunkServer() {
+	select {
+		case chunkServer := <- server.chunkServerChain:
+		go chunkServer.Run()
 	}
 }
 
@@ -104,11 +111,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 		}
 		for _, message := range messages {
 			server.Logger.Info("Received a message:\r\n" + message.ToString())
-			err := server.handleMessage(message, conn)
-			if err != nil {
-				server.Logger.Error(err) //消息处理失败直接关闭
-				conn.Close()
-			}
+			server.handleMessage(message, conn)
 		}
 	}
 }
@@ -137,7 +140,6 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	// 有处理错误直接关闭
 	if err != nil {
 		server.Logger.Warn(err)
-		conn.Write([]byte(err.Error()))
 		conn.Close()
 	}
 	return nil
@@ -145,16 +147,20 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 
 
 // Creates a new server.
-func NewServer(address string, logFile string) *Server {
+func NewServer(configuration *Configuration) *Server {
 	logger := log.NewLogger()
-	logger.SetLogFile(logFile).EnableConsole() //开启文件日志和控制台日志
+	logger.SetLogFile(configuration.Log["file"]).EnableConsole() //开启文件日志和控制台日志
+
+	authentication := NewSimplePasswordAuth(
+		configuration.Auth["username"],
+		configuration.Auth["password"],
+	)
 	return &Server{
-		address,
-		nil,
-		event.NewDispatcher(),
-		NewSimplePasswordAuth("spike", "spike"),
-		make(map[string]*Client, 0),
-		logger,
-		logFile,
+		Address:configuration.Address,
+		Dispatcher: event.NewDispatcher(),
+		Authentication: authentication,
+		Clients: make(map[string]*Client, 0),
+		Logger: logger,
+		chunkServerChain: make(chan ChunkServer, 0),
 	}
 }

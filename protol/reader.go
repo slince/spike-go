@@ -38,7 +38,7 @@ func (reader *Reader) Read() ([]*Protocol, error) {
 					} else if firstCharacter == "{" {
 						reader.endCharacter = "}"
 					} else {
-						return nil, errors.New("bad json start character:" + firstCharacter)
+						return nil, errors.New("bad json start character:" + string(chunk))
 					}
 				}
 

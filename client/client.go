@@ -112,7 +112,7 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 	// 处理消息
 	err := hd.(MessageHandler).Handle(message)
 	if err != nil {
-		client.Logger.Warn("bad response from the server")
+		client.Logger.Warn("message handle error:", err)
 	}
 	return nil
 }
