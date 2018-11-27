@@ -1,8 +1,8 @@
 package server
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/rs/xid"
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/tunnel"

@@ -1,8 +1,8 @@
 package client
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/slince/spike-go/protol"
 )
 

@@ -1,8 +1,8 @@
 package client
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/slince/spike-go/event"
 	"github.com/slince/spike-go/log"
 	"github.com/slince/spike-go/protol"
@@ -124,7 +124,7 @@ func (client *Client) findTunnelById(id string) (tunnel.Tunnel, error) {
 			return tn, nil
 		}
 	}
-	return nil, errors.New("The tunnel is missing with id")
+	return nil, errors.New("the tunnel is missing with id")
 }
 
 // 发送验证信息给服务端
