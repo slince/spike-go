@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
 
 
@@ -87,10 +88,25 @@ func main() {
 	//
 	//bytes.NewBufferString("").String()
 	//fmt.Println(map1["fooz"])
+	//
+	//
+	//var sl []int
+	//sl = append(sl, 10)
+	////sl[0] = 10
+	//fmt.Println(sl, len(sl))
 
+	a := make(chan int)
 
-	var sl []int
-	sl = append(sl, 10)
-	//sl[0] = 10
-	fmt.Println(sl, len(sl))
+	go func(){
+		time.Sleep(5 * time.Second)
+		a <- 100
+		tick := time.Tick(1 * time.Second)
+	}()
+
+	for {
+		select {
+		case foo := <- a:
+			fmt.Println(foo)
+		}
+	}
 }

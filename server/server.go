@@ -22,6 +22,8 @@ type Server struct {
 	Logger *log.Logger
 	// chunk server chain
 	chunkServerChain chan ChunkServer
+	// control conn control
+	controlConnChan chan net.Conn
 }
 
 // Run the server
@@ -35,15 +37,26 @@ func (server *Server) Run() {
 		panic(err.Error())
 	}
 	server.Logger.Info("The server is running...")
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			// handle error
-			continue
+	go server.resolveControlConn() // 消费所有控制请求
+	go server.runChunkServer() // 启动chunk server
+	go func() { //接收客户端请求
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				// handle error
+				continue
+			}
+			server.controlConnChan <- conn
 		}
+	}()
+}
+
+// 启动所有
+func (server *Server) resolveControlConn() {
+	for {
+		conn := <- server.controlConnChan
 		go server.handleConnection(conn)
 	}
-	go server.runChunkServer() // 启动chunk server
 }
 
 // 启动所有
