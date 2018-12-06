@@ -8,6 +8,7 @@ import (
 	"github.com/slince/spike-go/tunnel"
 	"net"
 )
+
 // 消息处理器接口
 type MessageHandler interface {
 	// Handle the message
@@ -132,7 +133,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 			continue
 		}
 		//创建对应的chunk server
-		chunkServer,err := newChunkServer(tn)
+		chunkServer,err := newChunkServer(tn, hd.server, hd.client)
 		if err != nil {
 			msg := &protol.Protocol{
 				Action: "register_tunnel_response",
@@ -171,7 +172,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 }
 
 // 创建chunk server
-func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){
+func newChunkServer(tn tunnel.Tunnel, server *Server, client *Client) (ChunkServer,error){
 	var chunkServer ChunkServer
 	//生成tunnel的id
 	tunnelId := xid.New().String()
@@ -181,11 +182,17 @@ func newChunkServer(tn tunnel.Tunnel) (ChunkServer,error){
 		tn.Id = tunnelId
 		chunkServer = &TcpChunkServer{
 			Tunnel: tn,
+			Client: client,
+			Server: server,
+			pubConnCollection: make(map[string]*PublicConn, 0),
 		}
 	case *tunnel.HttpTunnel:
 		tn.Id = tunnelId
 		tcpChunkServer := TcpChunkServer{
 			Tunnel: &tn.TcpTunnel,
+			Client: client,
+			Server: server,
+			pubConnCollection: make(map[string]*PublicConn, 0),
 		}
 		chunkServer = &HttpChunkServer{
 			TcpChunkServer: tcpChunkServer,

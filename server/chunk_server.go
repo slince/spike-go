@@ -31,7 +31,7 @@ type TcpChunkServer struct {
 
 // 启动服务
 func (chunkServer *TcpChunkServer) Run() error {
-	ln,err := net.Listen("tcp", ":" + chunkServer.Tunnel.ServerPort)
+	ln,err := net.Listen("tcp", "127.0.0.1:" + chunkServer.Tunnel.ServerPort)
 	if  err != nil {
 		return errors.New("failed to create chunk server")
 	}
@@ -54,6 +54,7 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 		Action: "request_proxy",
 		Headers: map[string]string{
 			"tunnel-id": chunkServer.Tunnel.Id,
+			"public-connection-id": pubConn.Id,
 		},
 	}
 	chunkServer.Server.SendMessageToClient(chunkServer.Client, &msg)

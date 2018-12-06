@@ -39,7 +39,7 @@ func (server *Server) Run() {
 	server.Logger.Info("The server is running...")
 	go server.resolveControlConn() // 消费所有控制请求
 	go server.runChunkServer() // 启动chunk server
-	go func() { //接收客户端请求
+	//go func() { //接收客户端请求
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
@@ -48,7 +48,7 @@ func (server *Server) Run() {
 			}
 			server.controlConnChan <- conn
 		}
-	}()
+	//}()
 }
 
 // 启动所有
@@ -61,8 +61,9 @@ func (server *Server) resolveControlConn() {
 
 // 启动所有
 func (server *Server) runChunkServer() {
-	select {
-		case chunkServer := <- server.chunkServerChain:
+	for {
+		chunkServer := <- server.chunkServerChain
+		fmt.Println("got a chunk server")
 		go chunkServer.Run()
 	}
 }
@@ -175,5 +176,6 @@ func NewServer(configuration *Configuration) *Server {
 		Clients: make(map[string]*Client, 0),
 		Logger: logger,
 		chunkServerChain: make(chan ChunkServer, 0),
+		controlConnChan: make(chan net.Conn),
 	}
 }

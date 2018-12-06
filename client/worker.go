@@ -24,6 +24,17 @@ func (worker *TcpWorker) Start() error{
 	if err != nil {
 		return err
 	}
+	// 发送消息给控制服务
+	message := &protol.Protocol{
+		Action: "register_proxy",
+		Headers: map[string]string{
+			"client-id": worker.Client.Id,
+			"tunnel-id": worker.tunnel.GetId(),
+			"public-connection-id": worker.publicConnId,
+		},
+	}
+	conn.Write(message.ToBytes())
+
 	reader := protol.NewReader(conn)
 	for {
 		messages,_ := reader.Read()
@@ -45,18 +56,12 @@ func (worker *TcpWorker) Start() error{
 
 }
 
+// 创建一个连接器连接控制服务器
 func (worker *TcpWorker) createConnector() (net.Conn, error) {
 	conn, err := net.Dial("tcp", worker.Client.ServerAddress)
 	if err != nil {
 		return conn, err
 	}
-	message := &protol.Protocol{
-		Action: "register_proxy",
-		Headers: map[string]string{
-		 	"public-connection-id": worker.publicConnId,
-		},
-	}
-	conn.Write(message.ToBytes())
 	return conn, nil
 }
 
