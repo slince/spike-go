@@ -11,6 +11,8 @@ type PublicConn struct {
 	Id string
 	Conn net.Conn
 	ProxyConnChan chan net.Conn
+	pubLock sync.RWMutex
+	proxyLock sync.RWMutex
 }
 
 func (pubConn *PublicConn) Pipe(conn net.Conn) {
@@ -21,12 +23,22 @@ func (pubConn *PublicConn) Pipe(conn net.Conn) {
 	var wait sync.WaitGroup
 	wait.Add(2)
 	go func() {
-		io.Copy(conn, pubConn.Conn)
-		wait.Done()
+		for {
+			pubConn.pubLock.RLock()
+			pubConn.proxyLock.Lock()
+			io.Copy(conn, pubConn.Conn)
+			pubConn.pubLock.RUnlock()
+			pubConn.proxyLock.RLock()
+		}
 	}()
 	go func() {
-		io.Copy(pubConn.Conn, conn)
-		wait.Done()
+		for {
+			pubConn.pubLock.Lock()
+			pubConn.proxyLock.RLock()
+			io.Copy(pubConn.Conn, conn)
+			pubConn.pubLock.Unlock()
+			pubConn.proxyLock.RUnlock()
+		}
 	}()
 
 	wait.Wait()
