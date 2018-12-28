@@ -45,6 +45,7 @@ func (client *Client) Start() {
 	if err != nil {
 		panic(err)
 	}
+
 	client.Logger.Info("the client has been connected to the server")
 	client.ControlConn = conn
 
@@ -84,6 +85,7 @@ func (client *Client) handleControlConnection() {
 		messages, err := reader.Read()
 		if err != nil {
 			client.Logger.Error(err) //忽略读取
+			return
 		}
 		for _, message := range messages {
 			client.Logger.Info("Received a message:\r\n" + message.ToString())

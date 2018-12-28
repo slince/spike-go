@@ -22,7 +22,7 @@ type TunnelConfiguration struct {
 
 
 // 从文件创建一个新的对象
-func CreateConfigurationFromFile(file string) (*Configuration, error){
+func CreateConfigs(file string) (*Configuration, error){
 	jsonFile,err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err

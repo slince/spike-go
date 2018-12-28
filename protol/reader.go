@@ -18,9 +18,13 @@ type Reader struct {
 // Read a message from io.reader
 func (reader *Reader) Read() ([]*Protocol, error) {
 	var messages = make([]*Protocol, 0, 5)
+	var (
+		err error
+		read int
+	)
 	for {
 		chunk := make([]byte, maxReadLength)
-		read, err := reader.rd.Read(chunk)
+		read, err = reader.rd.Read(chunk)
 
 		if err == nil {
 
@@ -69,7 +73,7 @@ func (reader *Reader) Read() ([]*Protocol, error) {
 			break
 		}
 	}
-	return messages, nil
+	return messages, err
 }
 
 

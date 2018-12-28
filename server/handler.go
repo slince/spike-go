@@ -34,7 +34,7 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 			Headers: map[string]string{"code": "403"},
 			Body: map[string]interface{}{"error": "bad request"},
 		}
-		hd.server.SendMessage(hd.connection, msg)
+		hd.server.sendMessage(hd.connection, msg)
 		return errors.New("bad request")
 	}
 	err := hd.server.Authentication.Auth(auth.(map[string]interface{}))
@@ -47,8 +47,8 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 	} else {
 		guid := xid.New().String()
 		client := &Client{
-			Connection: hd.connection,
-			Id: guid,
+			Conn: hd.connection,
+			Id:   guid,
 		}
 		hd.server.Clients[guid] = client
 
@@ -58,7 +58,7 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 			Body: map[string]interface{}{"client": client},
 		}
 	}
-	hd.server.SendMessage(hd.connection, msg)
+	hd.server.sendMessage(hd.connection, msg)
 	return nil
 }
 
@@ -71,7 +71,7 @@ func (hd *PingHandler) Handle(message *protol.Protocol) error{
 	msg := &protol.Protocol{
 		Action: "pong",
 	}
-	hd.server.SendMessage(hd.connection, msg)
+	hd.server.sendMessage(hd.connection, msg)
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 	var chunkServers = make([]ChunkServer, 0)
 	for _,tn := range tunnels {
 		//如果tunnel已经注册则拒绝再次注册
-		if hd.server.IsTunnelRegistered(tn) {
+		if hd.server.tunnelIsReg(tn) {
 			msg := &protol.Protocol{
 				Action: "register_tunnel_response",
 				Headers: map[string]string{"code": "1"},
@@ -129,7 +129,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 					"tunnel": tn,
 				},
 			}
-			hd.server.SendMessage(hd.connection, msg)
+			hd.server.sendMessage(hd.connection, msg)
 			continue
 		}
 		//创建对应的chunk server
@@ -144,7 +144,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 				},
 			}
 			hd.server.Logger.Warn("fail to create chunk server for the tunnel", err)
-			hd.server.SendMessage(hd.connection, msg)
+			hd.server.sendMessage(hd.connection, msg)
 			continue
 		}
 		registeredTunnels = append(registeredTunnels, tn)
@@ -164,7 +164,7 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 			Body: map[string]interface{}{"tunnels": registeredTunnels},
 		}
 
-		hd.server.SendMessage(hd.connection, msg)
+		hd.server.sendMessage(hd.connection, msg)
 		return nil
 	} else {
 		return errors.New("no tunnel is registered")
@@ -217,7 +217,7 @@ func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
 	if !ok {
 		return fmt.Errorf("missing tunnel id")
 	}
-	chunkServer := hd.server.FindChunkServer(tunnelId)
+	chunkServer := hd.server.findChunkServerByTunId(tunnelId)
 	if chunkServer == nil {
 		return fmt.Errorf("the chunk server %s is not found", tunnelId)
 	}

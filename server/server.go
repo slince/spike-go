@@ -24,6 +24,7 @@ type Server struct {
 	chunkServerChain chan ChunkServer
 	// control conn control
 	controlConnChan chan net.Conn
+	closedControlConnChan chan net.Conn
 }
 
 // Run the server
@@ -37,29 +38,28 @@ func (server *Server) Run() {
 		panic(err.Error())
 	}
 	server.Logger.Info("The server is running...")
+
+	go server.acceptControlConn(listener) // 接收请求
 	go server.resolveControlConn() // 消费所有控制请求
 	go server.runChunkServer() // 启动chunk server
-	//go func() { //接收客户端请求
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				// handle error
-				continue
-			}
-			server.controlConnChan <- conn
-		}
-	//}()
+
+	select {
+		case conn := <- server.closedControlConnChan:
+			client := server.findClientByConn(conn)
+			client.close()
+
+	}
 }
 
 // 启动所有
 func (server *Server) resolveControlConn() {
 	for {
 		conn := <- server.controlConnChan
-		go server.handleConnection(conn)
+		go server.handleControlConn(conn)
 	}
 }
 
-// 启动所有
+// 启动所有 chunk server
 func (server *Server) runChunkServer() {
 	for {
 		chunkServer := <- server.chunkServerChain
@@ -68,19 +68,31 @@ func (server *Server) runChunkServer() {
 	}
 }
 
+// 接收请求
+func (server *Server) acceptControlConn(listener net.Listener) {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			// handle error
+			continue
+		}
+		server.controlConnChan <- conn
+	}
+}
+
 // Send message to connection
-func (server *Server) SendMessage(connection net.Conn, message *protol.Protocol){
+func (server *Server) sendMessage(connection net.Conn, message *protol.Protocol){
 	jsonString := message.ToString()
 	connection.Write([]byte(jsonString))
 }
 
 // Send message to client
-func (server *Server) SendMessageToClient(client *Client, message *protol.Protocol) {
-	server.SendMessage(client.Connection, message)
+func (server *Server) sendToClient(client *Client, message *protol.Protocol) {
+	server.sendMessage(client.Conn, message)
 }
 
 // Checks whether tunnel is registered.
-func (server *Server) IsTunnelRegistered(tunnel tunnel.Tunnel) bool {
+func (server *Server) tunnelIsReg(tunnel tunnel.Tunnel) bool {
 	for _,client := range server.Clients {
 		for _, chunkServer := range client.ChunkServers {
 			if chunkServer.GetTunnel().MatchTunnel(tunnel) {
@@ -92,12 +104,22 @@ func (server *Server) IsTunnelRegistered(tunnel tunnel.Tunnel) bool {
 }
 
 // find chunk server by its tunnel
-func (server *Server) FindChunkServer(id string) ChunkServer{
+func (server *Server) findChunkServerByTunId(id string) ChunkServer{
 	for _, client := range server.Clients {
 		for _, chunkServer := range client.ChunkServers {
 			if chunkServer.GetTunnel().GetId() == id {
 				return chunkServer
 			}
+		}
+	}
+	return nil
+}
+
+// 查找client
+func (server *Server) findClientByConn(conn net.Conn) *Client{
+	for _,client := range server.Clients {
+		if client.Conn == conn {
+			return client
 		}
 	}
 	return nil
@@ -112,16 +134,17 @@ func (server *Server) registerListeners() {
 }
 
 // handle connection from client.
-func (server *Server) handleConnection(conn net.Conn) {
+func (server *Server) handleControlConn(conn net.Conn) {
 
 	server.Logger.Info("Accepted a connection.")
 	// 预读多条message
 	reader := protol.NewReader(conn)
 	for {
 		messages, err := reader.Read()
-		if err != nil { //如果读取失败跳过本次读取
+		if err != nil { //如果读取失败则关闭次连接
+			server.closedControlConnChan <- conn
 			server.Logger.Error(err)
-			continue
+			break
 		}
 		for _, message := range messages {
 			server.Logger.Info("Received a message:\r\n" + message.ToString())
