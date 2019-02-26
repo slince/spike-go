@@ -74,7 +74,7 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 
 	// 3. 管道请求
 	pubConn.Pipe(proxyConn)
-	delete(chunkServer.pubConnCollection, pubConn.Id)
+	//delete(chunkServer.pubConnCollection, pubConn.Id)
 }
 
 // 获取隧道
