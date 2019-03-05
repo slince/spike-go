@@ -35,24 +35,38 @@ func (worker *TcpWorker) Start() error{
 	}
 	conn.Write(message.ToBytes())
 
-	reader := protol.NewReader(conn)
-	for {
-		messages,_ := reader.Read()
-		for _, message := range messages {
-			if message.Action == "start_proxy" { // 此时需要等待服务端传送start_proxy
-				// 启动代理管道
-				worker.proxyConn = &ProxyConn{
-					Conn: conn,
-				}
-				localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
-				if dialErr != nil {
-					worker.localConn = localConn
-					worker.proxyConn.Pipe(worker.localConn)
-				}
-				break
-			}
-		}
+
+	// 启动代理管道
+	worker.proxyConn = &ProxyConn{
+		Conn: conn,
 	}
+	localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
+	if dialErr != nil {
+		worker.localConn = localConn
+		worker.proxyConn.Pipe(worker.localConn)
+	}
+	return dialErr
+
+	//return
+	//reader := protol.NewReader(conn)
+	//for {
+	//	messages,_ := reader.Read()
+	//	for _, message := range messages {
+	//		fmt.Println(message.ToString())
+	//		if message.Action == "start_proxy" { // 此时需要等待服务端传送start_proxy
+	//			// 启动代理管道
+	//			worker.proxyConn = &ProxyConn{
+	//				Conn: conn,
+	//			}
+	//			localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
+	//			if dialErr != nil {
+	//				worker.localConn = localConn
+	//				worker.proxyConn.Pipe(worker.localConn)
+	//			}
+	//			break
+	//		}
+	//	}
+	//}
 
 }
 

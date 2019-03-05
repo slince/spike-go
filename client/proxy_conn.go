@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -20,10 +21,12 @@ func (proxyConn *ProxyConn) Pipe(conn net.Conn) {
 	wait.Add(2)
 	go func() {
 		io.Copy(conn, proxyConn.Conn)
+		fmt.Println("readed")
 		wait.Done()
 	}()
 	go func() {
 		io.Copy(proxyConn.Conn, conn)
+		fmt.Println("copied")
 		wait.Done()
 	}()
 

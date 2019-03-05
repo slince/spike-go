@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/rs/xid"
 	"io"
 	"net"
@@ -26,40 +25,40 @@ func (pubConn *PublicConn) Pipe(proxyConn net.Conn) {
 	wait.Add(2)
 	go func() { // 从公网请求读数据并写入到代理请求
 		for {
-			fmt.Println("pub read start")
-			pubConn.pubLock.RLock() // 公众请求读锁
-			pubConn.proxyLock.Lock() // 代理请求写锁
-			fmt.Println("pub copy start")
-			writtenBytes, err := io.Copy(proxyConn, pubConn.Conn)
-			fmt.Println("pub copied")
+			//fmt.Println("pub read start")
+			//pubConn.pubLock.RLock() // 公众请求读锁
+			//pubConn.proxyLock.Lock() // 代理请求写锁
+			//fmt.Println("pub copy start")
+			_, err := io.Copy(proxyConn, pubConn.Conn)
+			//fmt.Println("pub copied")
 			if err != nil { //读取出错两者都关闭
 				panic(err)
 				proxyConn.Close()
 				pubConn.Conn.Close()
-				return
+				break
 			}
-			fmt.Println("pub read bytes:", writtenBytes)
-			pubConn.pubLock.RUnlock()
-			pubConn.proxyLock.Unlock()
+			//fmt.Println("pub read bytes:", writtenBytes)
+			//pubConn.pubLock.RUnlock()
+			//pubConn.proxyLock.Unlock()
 		}
 	}()
 	go func() { // 从代理请求读取并写入到公众请求
 		for {
-			fmt.Println("proxy read start")
-			pubConn.proxyLock.RLock()
-			pubConn.pubLock.Lock()
-			fmt.Println("proxy copy start")
-			writtenBytes, err := io.Copy(pubConn.Conn, proxyConn)
-			fmt.Println("proxy copied")
+			//fmt.Println("proxy read start")
+			//pubConn.proxyLock.RLock()
+			//pubConn.pubLock.Lock()
+			//fmt.Println("proxy copy start")
+			_, err := io.Copy(pubConn.Conn, proxyConn)
+			//fmt.Println("proxy copied")
 			if err != nil { //读取出错两者都关闭
 				panic(err)
 				proxyConn.Close()
 				pubConn.Conn.Close()
-				return
+				break
 			}
-			fmt.Println("proxy read bytes:", writtenBytes)
-			pubConn.proxyLock.RUnlock()
-			pubConn.pubLock.Unlock()
+			//fmt.Println("proxy read bytes:", writtenBytes)
+			//pubConn.proxyLock.RUnlock()
+			//pubConn.pubLock.Unlock()
 		}
 	}()
 
