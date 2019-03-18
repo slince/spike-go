@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-const maxReadLength = 60
+const maxReadLength = 5
 
 // Protocol Reader
 type Reader struct {
