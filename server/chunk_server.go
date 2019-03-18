@@ -9,47 +9,82 @@ import (
 )
 
 type ChunkServer interface {
-	//启动监听服务
-	Run() error
-	//获取对应的tunnel
-	GetTunnel() tunnel.Tunnel
-	// 设置代理连接
-	SetProxyConnection(pubConnId string, conn net.Conn) error
-	// Close the chunk server
-	Close()
+	// run this server
+	run() error
+	// get tunnel of chunk server
+	getTunnel() tunnel.Tunnel
+	// set proxy conn
+	setProxyConn(pubConnId string, conn net.Conn) error
+	// close the chunk server
+	close()
 }
 
 // 监听公网接口
 type TcpChunkServer struct {
 	//对应的隧道
-	Tunnel *tunnel.TcpTunnel
+	tunnel *tunnel.TcpTunnel
 	//服务的客户端
-	Client *Client
+	client *Client
 	//服务调度程序
-	Server *Server
+	server *Server
 	//公共请求
-	pubConnCollection map[string]*PublicConn
-	// socket
-	listener net.Listener
+	pubConnsChan chan *PublicConn
+	pubConns map[string]*PublicConn
+	closeChan chan int
 }
 
 // 启动服务
-func (chunkServer *TcpChunkServer) Run() error {
-	var err error
-	chunkServer.listener,err = net.Listen("tcp", "127.0.0.1:" + chunkServer.Tunnel.ServerPort)
-	if  err != nil {
+func (chunkServer *TcpChunkServer) run() error {
+	// enable listen
+	listener, err := net.Listen("tcp", "127.0.0.1:" +
+		chunkServer.tunnel.ServerPort)
+
+	if err != nil {
 		return errors.New("failed to create chunk server")
 	}
+	// listener accept
+	go chunkServer.acceptConn(listener)
+	// process public conn
+	go chunkServer.processPublicConns()
+	return nil
+}
+
+func (chunkServer *TcpChunkServer) acceptConn(listener net.Listener){
 	for {
-		conn, err := chunkServer.listener.Accept()
-		if err != nil {
-			// handle error
-			continue
+		select {
+		case <- chunkServer.closeChan:
+			listener.Close()
+			break
+		default:
+			conn, err := listener.Accept()
+			if err != nil {
+				// handle error
+				continue
+			}
+			//bytes := make([]byte, 1000)
+			//conn.Read(bytes)
+			//bytes,_ := ioutil.ReadAll(conn)
+			//fmt.Println(string(bytes), "end")
+
+			publicConn := newPublicConn(conn)
+			chunkServer.pubConns[publicConn.Id] = publicConn
+			chunkServer.pubConnsChan <- publicConn
 		}
-		publicConnection := NewPublicConn(conn)
-		chunkServer.pubConnCollection[publicConnection.Id] = publicConnection
-		//处理请求
-		go chunkServer.handleConnection(publicConnection)
+	}
+}
+
+func (chunkServer *TcpChunkServer) processPublicConns(){
+	for {
+		select {
+		case <- chunkServer.closeChan:
+			for _,pubConn := range chunkServer.pubConns {
+				pubConn.close()
+			}
+			break
+		case publicConn := <- chunkServer.pubConnsChan :
+			//处理请求
+			go chunkServer.handleConnection(publicConn)
+		}
 	}
 }
 
@@ -59,46 +94,44 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 	msg := protol.Protocol{
 		Action: "request_proxy",
 		Headers: map[string]string{
-			"tunnel-id": chunkServer.Tunnel.Id,
+			"tunnel-id": chunkServer.tunnel.Id,
 			"public-connection-id": pubConn.Id,
 		},
 	}
-	chunkServer.Server.sendToClient(chunkServer.Client, &msg)
+	chunkServer.server.sendToClient(chunkServer.client, &msg)
+
+	fmt.Println("step1")
 
 	// 2. 挂起当前公网请求
-	//var proxyConn net.Conn
-	proxyConn := <- pubConn.ProxyConnChan //从通道读取代理请求
-	defer close(pubConn.ProxyConnChan)
+	//var proxyConn net.controlConn
+	proxyConn := <- pubConn.proxyConnChan //从通道读取代理请求
+	defer close(pubConn.proxyConnChan)
 
 	fmt.Println("read a proxy conn")
 
 	// 3. 管道请求
-	pubConn.Pipe(proxyConn)
+	pubConn.pipe(proxyConn)
 	//delete(chunkServer.pubConnCollection, pubConn.Id)
 }
 
 // 获取隧道
-func (chunkServer *TcpChunkServer) GetTunnel() tunnel.Tunnel{
-	return chunkServer.Tunnel
+func (chunkServer *TcpChunkServer) getTunnel() tunnel.Tunnel{
+	return chunkServer.tunnel
 }
 
 // 设置代理链接
-func (chunkServer *TcpChunkServer) SetProxyConnection(pubConnId string, conn net.Conn) error{
+func (chunkServer *TcpChunkServer) setProxyConn(pubConnId string, conn net.Conn) error{
 	fmt.Println("find a proxy conn")
-	if pubConn, ok := chunkServer.pubConnCollection[pubConnId];ok {
-		pubConn.ProxyConnChan <- conn
+	if pubConn, ok := chunkServer.pubConns[pubConnId];ok {
+		pubConn.proxyConnChan <- conn
 		return nil
 	}
 	return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
 }
 
 // 关闭chunk server
-func (chunkServer *TcpChunkServer) Close() {
-	// close all chunk server
-	for _, publicConn := range chunkServer.pubConnCollection {
-		publicConn.Conn.Close()
-	}
-	chunkServer.listener.Close() // 关闭监听
+func (chunkServer *TcpChunkServer) close() {
+	chunkServer.closeChan <- 1
 }
 
 // http chunk server

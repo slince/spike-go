@@ -25,7 +25,7 @@ type AuthHandler struct{
 	Handler
 }
 
-func (hd *AuthHandler) Handle(message *protol.Protocol) error{
+func (hdl *AuthHandler) Handle(message *protol.Protocol) error{
 	//验证客户端凭证
 	auth, ok := message.Body["auth"]
 	if !ok {
@@ -34,10 +34,10 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 			Headers: map[string]string{"code": "403"},
 			Body: map[string]interface{}{"error": "bad request"},
 		}
-		hd.server.sendMessage(hd.connection, msg)
+		hdl.server.sendMessage(hdl.connection, msg)
 		return errors.New("bad request")
 	}
-	err := hd.server.Authentication.Auth(auth.(map[string]interface{}))
+	err := hdl.server.Authentication.Auth(auth.(map[string]interface{}))
 	var msg *protol.Protocol
 	if err != nil {
 		msg = &protol.Protocol{
@@ -45,20 +45,16 @@ func (hd *AuthHandler) Handle(message *protol.Protocol) error{
 			Headers: map[string]string{"code": "403"},
 		}
 	} else {
-		guid := xid.New().String()
-		client := &Client{
-			Conn: hd.connection,
-			Id:   guid,
-		}
-		hd.server.Clients[guid] = client
-
+		// create one new client
+		client := newClient(hdl.connection)
+		hdl.server.Clients[client.Id] = client
 		msg = &protol.Protocol{
 			Action: "auth_response",
 			Headers: map[string]string{"code": "200"},
 			Body: map[string]interface{}{"client": client},
 		}
 	}
-	hd.server.sendMessage(hd.connection, msg)
+	hdl.server.sendMessage(hdl.connection, msg)
 	return nil
 }
 
@@ -67,11 +63,11 @@ type PingHandler struct{
 	Handler
 }
 
-func (hd *PingHandler) Handle(message *protol.Protocol) error{
+func (hdl *PingHandler) Handle(message *protol.Protocol) error{
 	msg := &protol.Protocol{
 		Action: "pong",
 	}
-	hd.server.sendMessage(hd.connection, msg)
+	hdl.server.sendMessage(hdl.connection, msg)
 	return nil
 }
 
@@ -82,13 +78,13 @@ type RequireAuthHandler struct {
 	client *Client
 }
 
-func (hd *RequireAuthHandler) isAuthenticated(message *protol.Protocol) bool{
+func (hdl *RequireAuthHandler) isAuthenticated(message *protol.Protocol) bool{
 	clientId, ok := message.Headers["client-id"]
 	if !ok {
 		return false
 	}
-	if client, ok := hd.server.Clients[clientId]; ok{
-		hd.client = client
+	if client, ok := hdl.server.Clients[clientId]; ok{
+		hdl.client = client
 		return true
 	}
 	return false
@@ -99,8 +95,8 @@ type RegisterTunnelHandler struct{
 	RequireAuthHandler
 }
 
-func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
-	if !hd.isAuthenticated(message) {
+func (hdl *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
+	if !hdl.isAuthenticated(message) {
 		return errors.New("the client is not authorized")
 	}
 
@@ -116,55 +112,54 @@ func (hd *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 
 	//创建tunnel
 	tunnels := tunnel.NewManyTunnels(details)
-	registeredTunnels := make([]tunnel.Tunnel, 0)
+	regTunns := make([]tunnel.Tunnel, 0)
 	var chunkServers = make([]ChunkServer, 0)
-	for _,tn := range tunnels {
+	for _,tun := range tunnels {
 		//如果tunnel已经注册则拒绝再次注册
-		if hd.server.tunnelIsReg(tn) {
+		if hdl.server.checkTunExists(tun) {
 			msg := &protol.Protocol{
 				Action: "register_tunnel_response",
 				Headers: map[string]string{"code": "1"},
 				Body: map[string]interface{}{
 					"error": "The tunnel has been registered",
-					"tunnel": tn,
+					"tunnel": tun,
 				},
 			}
-			hd.server.sendMessage(hd.connection, msg)
+			hdl.server.sendMessage(hdl.connection, msg)
 			continue
 		}
 		//创建对应的chunk server
-		chunkServer,err := newChunkServer(tn, hd.server, hd.client)
+		chunkServer,err := newChunkServer(tun, hdl.server, hdl.client)
 		if err != nil {
 			msg := &protol.Protocol{
 				Action: "register_tunnel_response",
 				Headers: map[string]string{"code": "2"},
 				Body: map[string]interface{}{
 					"error": "Error create chunk server.",
-					"tunnel": tn,
+					"tunnel": tun,
 				},
 			}
-			hd.server.Logger.Warn("fail to create chunk server for the tunnel", err)
-			hd.server.sendMessage(hd.connection, msg)
+			hdl.server.Logger.Warn("fail to create chunk server for the tunnel", err)
+			hdl.server.sendMessage(hdl.connection, msg)
 			continue
 		}
-		registeredTunnels = append(registeredTunnels, tn)
+		// start chunk server
+		chunkServer.run()
+		regTunns = append(regTunns, tun)
 		chunkServers = append(chunkServers, chunkServer)
 	}
 	//如果有成功
-	if len(registeredTunnels) > 0 {
+	if len(regTunns) > 0 {
 		//追加入客户端的chunk servers,
-		hd.client.ChunkServers = append(hd.client.ChunkServers, chunkServers...)
-		for _, chunkServer := range chunkServers {
-			hd.server.chunkServerChain <-chunkServer
-		}
+		hdl.client.chunkServers = append(hdl.client.chunkServers, chunkServers...)
 		//注册成功的客户端
 		msg := &protol.Protocol{
 			Action: "register_tunnel_response",
 			Headers: map[string]string{"code": "200"},
-			Body: map[string]interface{}{"tunnels": registeredTunnels},
+			Body: map[string]interface{}{"tunnels": regTunns},
 		}
 
-		hd.server.sendMessage(hd.connection, msg)
+		hdl.server.sendMessage(hdl.connection, msg)
 		return nil
 	} else {
 		return errors.New("no tunnel is registered")
@@ -181,18 +176,22 @@ func newChunkServer(tn tunnel.Tunnel, server *Server, client *Client) (ChunkServ
 	case *tunnel.TcpTunnel:
 		tn.Id = tunnelId
 		chunkServer = &TcpChunkServer{
-			Tunnel: tn,
-			Client: client,
-			Server: server,
-			pubConnCollection: make(map[string]*PublicConn, 0),
+			tunnel: tn,
+			client: client,
+			server: server,
+			pubConns: make(map[string]*PublicConn, 0),
+			pubConnsChan: make(chan *PublicConn, 0),
+			closeChan: make(chan int, 1),
 		}
 	case *tunnel.HttpTunnel:
 		tn.Id = tunnelId
 		tcpChunkServer := TcpChunkServer{
-			Tunnel: &tn.TcpTunnel,
-			Client: client,
-			Server: server,
-			pubConnCollection: make(map[string]*PublicConn, 0),
+			tunnel: &tn.TcpTunnel,
+			client: client,
+			server: server,
+			pubConns: make(map[string]*PublicConn, 0),
+			pubConnsChan: make(chan *PublicConn, 0),
+			closeChan: make(chan int, 1),
 		}
 		chunkServer = &HttpChunkServer{
 			TcpChunkServer: tcpChunkServer,
@@ -208,8 +207,8 @@ type RegisterProxyHandler struct{
 	RequireAuthHandler
 }
 
-func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
-	if !hd.isAuthenticated(message) {
+func (hdl *RegisterProxyHandler) Handle(message *protol.Protocol) error{
+	if !hdl.isAuthenticated(message) {
 		return errors.New("the client is not authorized")
 	}
 
@@ -217,16 +216,16 @@ func (hd *RegisterProxyHandler) Handle(message *protol.Protocol) error{
 	if !ok {
 		return fmt.Errorf("missing tunnel id")
 	}
-	chunkServer := hd.server.findChunkServerByTunId(tunnelId)
+	chunkServer := hdl.server.findChunkServerByTunId(tunnelId)
 	if chunkServer == nil {
 		return fmt.Errorf("the chunk server %s is not found", tunnelId)
 	}
-	publicConnectionId,ok := message.Headers["public-connection-id"]
+	pubConnId,ok := message.Headers["public-connection-id"]
 	if !ok { //错误的注册代理协议
 		return fmt.Errorf("missing public id")
 	}
 	// set proxy connection
-	chunkServer.SetProxyConnection(publicConnectionId, hd.connection)
+	chunkServer.setProxyConn(pubConnId, hdl.connection)
 	return nil
 }
 

@@ -1,19 +1,32 @@
 package server
 
 import (
+	"github.com/rs/xid"
+	"github.com/slince/spike-go/tunnel"
 	"net"
 )
 
 type Client struct{
 	Id           string        `json:"id"`
-	Conn         net.Conn      `json:"-"`
-	ChunkServers []ChunkServer `json:"-"`
+	controlConn  net.Conn      `json:"-"`
+	chunkServers []ChunkServer `json:"-"`
+	tunnels map[string]tunnel.Tunnel
 }
 
 // close the client
 func (client *Client) close() {
-	for _, cServer := range client.ChunkServers {
-		cServer.Close()
+	for _, chunkServer := range client.chunkServers {
+		chunkServer.close()
 	}
-	client.Conn.Close()
+	// 关闭当前控制连接
+	client.controlConn.Close()
+}
+
+// create one client
+func newClient(controlConn net.Conn) *Client{
+	return &Client{
+		Id: xid.New().String(),
+		controlConn: controlConn,
+		tunnels: make(map[string]tunnel.Tunnel, 0),
+	}
 }

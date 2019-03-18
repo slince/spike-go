@@ -1,8 +1,10 @@
 package client
 
 import (
+	"fmt"
 	"github.com/slince/spike-go/protol"
 	"github.com/slince/spike-go/tunnel"
+	"io/ioutil"
 	"net"
 )
 
@@ -35,7 +37,6 @@ func (worker *TcpWorker) Start() error{
 	}
 	conn.Write(message.ToBytes())
 
-
 	// 启动代理管道
 	worker.proxyConn = &ProxyConn{
 		Conn: conn,
@@ -43,7 +44,11 @@ func (worker *TcpWorker) Start() error{
 	localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
 	if dialErr != nil {
 		worker.localConn = localConn
-		worker.proxyConn.Pipe(worker.localConn)
+		bytes,_ := ioutil.ReadAll(localConn)
+		fmt.Println(string(bytes), "readed")
+		worker.proxyConn.pipe(worker.localConn)
+	} else {
+		fmt.Println(dialErr)
 	}
 	return dialErr
 
@@ -56,7 +61,7 @@ func (worker *TcpWorker) Start() error{
 	//		if message.Action == "start_proxy" { // 此时需要等待服务端传送start_proxy
 	//			// 启动代理管道
 	//			worker.proxyConn = &ProxyConn{
-	//				Conn: conn,
+	//				controlConn: conn,
 	//			}
 	//			localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
 	//			if dialErr != nil {

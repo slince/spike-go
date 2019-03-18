@@ -10,67 +10,65 @@ import (
 // 公网请求
 type PublicConn struct {
 	Id string
-	Conn net.Conn
-	ProxyConnChan chan net.Conn
-	pubLock sync.RWMutex
-	proxyLock sync.RWMutex
+	conn net.Conn
+	proxyConnChan chan net.Conn
 }
 
-func (pubConn *PublicConn) Pipe(proxyConn net.Conn) {
+func (pubConn *PublicConn) pipe(proxyConn net.Conn) {
 
 	defer proxyConn.Close()
-	defer pubConn.Conn.Close()
+	defer pubConn.conn.Close()
 
-	var wait sync.WaitGroup
+	var wait = sync.WaitGroup{}
 	wait.Add(2)
+
 	go func() { // 从公网请求读数据并写入到代理请求
 		for {
-			//fmt.Println("pub read start")
-			//pubConn.pubLock.RLock() // 公众请求读锁
-			//pubConn.proxyLock.Lock() // 代理请求写锁
-			//fmt.Println("pub copy start")
-			_, err := io.Copy(proxyConn, pubConn.Conn)
+			//fmt.Println("pub copy")
+			_,err := io.Copy(pubConn.conn, proxyConn)
+			//fmt.Println(string(bytes), "end")
 			//fmt.Println("pub copied")
-			if err != nil { //读取出错两者都关闭
-				panic(err)
+			if err != nil {
 				proxyConn.Close()
-				pubConn.Conn.Close()
+				pubConn.conn.Close()
+				panic(err)
 				break
 			}
-			//fmt.Println("pub read bytes:", writtenBytes)
-			//pubConn.pubLock.RUnlock()
-			//pubConn.proxyLock.Unlock()
 		}
+		wait.Done()
 	}()
+
 	go func() { // 从代理请求读取并写入到公众请求
 		for {
-			//fmt.Println("proxy read start")
-			//pubConn.proxyLock.RLock()
-			//pubConn.pubLock.Lock()
-			//fmt.Println("proxy copy start")
-			_, err := io.Copy(pubConn.Conn, proxyConn)
+			//fmt.Println("proxy copy")
+			//bytes,err := ioutil.ReadAll(proxyConn)
+			//fmt.Println(string(bytes), "end")
 			//fmt.Println("proxy copied")
+			_,err := io.Copy(proxyConn, pubConn.conn)
 			if err != nil { //读取出错两者都关闭
-				panic(err)
 				proxyConn.Close()
-				pubConn.Conn.Close()
+				pubConn.conn.Close()
+				panic(err)
 				break
 			}
-			//fmt.Println("proxy read bytes:", writtenBytes)
-			//pubConn.proxyLock.RUnlock()
-			//pubConn.pubLock.Unlock()
 		}
+		wait.Done()
 	}()
 
 	wait.Wait()
 }
 
+// close
+func (pubConn *PublicConn) close() {
+	pubConn.conn.Close()
+}
+
 // Create a public connection.
-func NewPublicConn(conn net.Conn) *PublicConn {
+func newPublicConn(conn net.Conn) *PublicConn {
 	ch := make(chan net.Conn)
 	return &PublicConn{
 		Id: xid.New().String(),
-		Conn: conn,
-		ProxyConnChan: ch,
+		conn: conn,
+		proxyConnChan: ch,
 	}
 }

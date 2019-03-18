@@ -52,7 +52,7 @@ func (client *Client) Start() {
 	client.handleControlConnection()
 }
 
-// Close the client
+// close the client
 func (client *Client) Close() {
 
 }
