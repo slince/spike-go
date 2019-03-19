@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 )
@@ -25,7 +26,7 @@ func (reader *Reader) Read() (protocol *Protocol, err error){
 	if err != nil {
 		return
 	}
-
+fmt.Println(length)
 	var readBytes = make([]byte, length)
 	readLength, err := io.ReadFull(reader.reader, readBytes)
 

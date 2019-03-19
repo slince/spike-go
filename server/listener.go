@@ -41,6 +41,7 @@ func OnMessage(ev *event.Event){
 		handler = messageFactory.NewRegisterTunnelHandler()
 	case "register_proxy":
 		handler = messageFactory.NewRegisterProxyHandler()
+		ev.Parameters["break_listen"] = true
 	}
 	ev.Parameters["handler"] = handler
 }

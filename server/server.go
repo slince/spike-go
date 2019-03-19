@@ -92,15 +92,19 @@ func (server *Server) handleControlConn(conn net.Conn) {
 			break
 		}
 		server.Logger.Info("Received a message:\r\n" + message.ToString())
-		err = server.handleMessage(message, conn)
+		err, breakListen := server.handleMessage(message, conn)
+		fmt.Print(message.Action, breakListen)
 		if err != nil {
 			conn.Close()
+		}
+		if breakListen { // 如果确认不再由系统监听
+			break
 		}
 	}
 }
 
 // Handle message
-func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) error {
+func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) (err error, breakListen bool) {
 	// fire event
 	ev := event.NewEvent("message", map[string]interface{}{
 		"message":  message,
@@ -108,7 +112,6 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 		"conn": conn,
 	})
 	server.Dispatcher.Fire(ev)
-
 	// 获取handler
 	hdl, ok := ev.Parameters["handler"]
 	// 收到不知名的报文
@@ -116,15 +119,17 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 		ev = event.NewEvent("unknownMessage", map[string]interface{}{"message":  message})
 		server.Dispatcher.Fire(ev)
 		server.Logger.Warn("receive a unknown message")
-		return fmt.Errorf("receive a unknown message")
+		err = fmt.Errorf("receive a unknown message")
 	}
 	// 处理消息
-	err := hdl.(MessageHandler).Handle(message)
+	err = hdl.(MessageHandler).Handle(message)
 	if err != nil {
 		server.Logger.Warn(err)
-		return err
 	}
-	return nil
+	if isBreakListen, ok := ev.Parameters["break_listen"]; ok {
+		breakListen = isBreakListen.(bool)
+	}
+	return
 }
 
 // Send message to conn
