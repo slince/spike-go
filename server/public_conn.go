@@ -63,7 +63,7 @@ func (pubConn *PublicConn) close() {
 	pubConn.conn.Close()
 }
 
-// Create a public connection.
+// Create a public conn.
 func newPublicConn(conn net.Conn) *PublicConn {
 	ch := make(chan net.Conn)
 	return &PublicConn{

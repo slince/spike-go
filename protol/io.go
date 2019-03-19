@@ -3,15 +3,14 @@ package protol
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
+	"encoding/json"
+	"errors"
+	"io"
 	"net"
 )
 
-
-import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
+var (
+	errorReadError = errors.New("read error")
 )
 
 // Protocol Reader
@@ -20,29 +19,32 @@ type Reader struct {
 }
 
 // read a message from io.reader
-func (reader *Reader) Read() (*Protocol, error){
+func (reader *Reader) Read() (protocol *Protocol, err error){
 	var length int64
-	err := binary.Read(reader.reader, binary.BigEndian, &length)
+	err = binary.Read(reader.reader, binary.BigEndian, &length)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	fmt.Println(length)
+	var readBytes = make([]byte, length)
+	readLength, err := io.ReadFull(reader.reader, readBytes)
 
-	readBytes, err := ioutil.ReadAll(reader.reader)
 	if err != nil{
-		return nil, err
+		return
 	}
-	protocol := &Protocol{}
+	protocol = &Protocol{}
 	err = json.Unmarshal(readBytes, protocol)
 
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return protocol, nil
+	if int64(readLength) != length {
+		err = errorReadError
+		return
+	}
+	return
 }
-
 
 // Create a new protocol reader
 func NewReader(reader io.Reader) *Reader{
@@ -50,7 +52,6 @@ func NewReader(reader io.Reader) *Reader{
 		reader,
 	}
 }
-
 
 type Writer struct {
 	writer io.Writer
@@ -77,15 +78,6 @@ func IntToBytes(num int) []byte{
 	return buf.Bytes()
 }
 
-func BytesToInt(b []byte) int {
-	bytesBuffer := bytes.NewBuffer(b)
-
-	var x int64
-	binary.Read(bytesBuffer, binary.BigEndian, &x)
-
-	return int(x)
-}
-
 type IO struct {
 	conn net.Conn
 	reader *Reader
@@ -105,6 +97,14 @@ func NewIO(conn net.Conn) *IO{
 		NewReader(conn),
 		NewWriter(conn),
 	}
+}
+
+func ReadMsg(conn net.Conn){
+	NewIO(conn).Read()
+}
+
+func WriteMsg(conn net.Conn, msg *Protocol){
+	NewIO(conn).Write(msg)
 }
 
 

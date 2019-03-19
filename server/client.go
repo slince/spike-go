@@ -8,9 +8,9 @@ import (
 
 type Client struct{
 	Id           string        `json:"id"`
-	controlConn  net.Conn      `json:"-"`
+	ctrlConn     net.Conn      `json:"-"`
 	chunkServers []ChunkServer `json:"-"`
-	tunnels map[string]tunnel.Tunnel
+	tunnels      map[string]tunnel.Tunnel
 }
 
 // close the client
@@ -19,14 +19,14 @@ func (client *Client) close() {
 		chunkServer.close()
 	}
 	// 关闭当前控制连接
-	client.controlConn.Close()
+	client.ctrlConn.Close()
 }
 
 // create one client
 func newClient(controlConn net.Conn) *Client{
 	return &Client{
-		Id: xid.New().String(),
-		controlConn: controlConn,
-		tunnels: make(map[string]tunnel.Tunnel, 0),
+		Id:       xid.New().String(),
+		ctrlConn: controlConn,
+		tunnels:  make(map[string]tunnel.Tunnel, 0),
 	}
 }

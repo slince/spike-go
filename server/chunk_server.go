@@ -95,15 +95,13 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 		Action: "request_proxy",
 		Headers: map[string]string{
 			"tunnel-id": chunkServer.tunnel.Id,
-			"public-connection-id": pubConn.Id,
+			"pub-conn-id": pubConn.Id,
 		},
 	}
-	chunkServer.server.sendToClient(chunkServer.client, &msg)
-
-	fmt.Println("step1")
+	protol.WriteMsg(chunkServer.client.ctrlConn, &msg)
 
 	// 2. 挂起当前公网请求
-	//var proxyConn net.controlConn
+	//var proxyConn net.ctrlConn
 	proxyConn := <- pubConn.proxyConnChan //从通道读取代理请求
 	defer close(pubConn.proxyConnChan)
 
@@ -126,7 +124,7 @@ func (chunkServer *TcpChunkServer) setProxyConn(pubConnId string, conn net.Conn)
 		pubConn.proxyConnChan <- conn
 		return nil
 	}
-	return fmt.Errorf(`the public connection id "%s" is missing`, pubConnId)
+	return fmt.Errorf(`the public conn id "%s" is missing`, pubConnId)
 }
 
 // 关闭chunk server

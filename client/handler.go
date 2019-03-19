@@ -20,27 +20,27 @@ type AuthResponseHandler struct {
 	Handler
 }
 
-func (hd *AuthResponseHandler) Handle(message *protol.Protocol) error{
+func (hdl *AuthResponseHandler) Handle(message *protol.Protocol) error{
 	if message.Headers["code"] != "200" {
-		hd.client.Close() // 关闭客户端
+		hdl.client.Close() // 关闭客户端
 		return errors.New("auth error")
 	}
 	client := message.Body["client"].(map[string]interface{})
-	hd.client.Id = client["id"].(string)
+	hdl.client.Id = client["id"].(string)
 
-	hd.registerTunnel() // 验证成功以后注册隧道
+	hdl.registerTunnel() // 验证成功以后注册隧道
 	return nil
 }
 
 // 注册所有的隧道到服务器
-func (hd *AuthResponseHandler) registerTunnel() {
+func (hdl *AuthResponseHandler) registerTunnel() {
 	message := &protol.Protocol{
 		Action: "register_tunnel",
 		Body: map[string]interface{}{
-			"tunnels": hd.client.Tunnels,
+			"tunnels": hdl.client.Tunnels,
 		},
 	}
-	hd.client.sendMessage(message)
+	hdl.client.sendMessage(message)
 }
 
 // 注册隧道信息返回处理
@@ -48,7 +48,7 @@ type RegisterTunnelResponseHandler struct {
 	Handler
 }
 
-func (hd *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error {
+func (hdl *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error {
 	if code,ok := message.Headers["code"]; !ok || code != "200" {
 		targetTunnel := message.Body["tunnel"].(map[string]interface{})
 		serverPort := targetTunnel["server_port"].(string)
@@ -63,14 +63,14 @@ func (hd *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error 
 		for key, val := range regTunnelInfo {
 			info[key] = val.(string)
 		}
-		for _, tunnel := range hd.client.Tunnels { //找到本地tunnel，修改tunnel id
+		for _, tunnel := range hdl.client.Tunnels { //找到本地tunnel，修改tunnel id
 			if tunnel.Match(info) {
 				tunnel.SetId(info["id"])
 			}
 		}
 	}
 
-	hd.client.Logger.Info("register tunnel ok")
+	hdl.client.Logger.Info("register tunnel ok")
 	return nil
 }
 
@@ -79,25 +79,20 @@ type RequestProxyHandler struct {
 	Handler
 }
 
-func (hd *RequestProxyHandler) Handle(message *protol.Protocol) error {
+func (hdl *RequestProxyHandler) Handle(message *protol.Protocol) error {
 	tunnelId, ok := message.Headers["tunnel-id"]
-	publicConnId, publicConnIdOk := message.Headers["public-connection-id"]
+	publicConnId, publicConnIdOk := message.Headers["pub-conn-id"]
 	if !ok || !publicConnIdOk {
 		return errors.New("missing tunnel id or public connection id")
 	}
-	tunnel,err := hd.client.findTunnelById(tunnelId)
+	tunnel,err := hdl.client.findTunnelById(tunnelId)
 	if err != nil {
 		return errors.New("bad tunnel")
 	}
-
-	worker := &TcpWorker{
-		Client: hd.client,
-		publicConnId: publicConnId,
-		tunnel: tunnel,
-	}
+	worker := newWorker(hdl.client, publicConnId, tunnel)
 	err = worker.Start()
 	if err != nil {
-		hd.client.Logger.Error("fail to create worker for request_proxy message")
+		hdl.client.Logger.Error("fail to create worker for request_proxy message")
 	}
 	return nil
 }

@@ -8,11 +8,11 @@ import (
 
 type Worker interface {
 	// Start the worker
-	Start()
+	Start() error
 }
 
 type TcpWorker struct {
-	Client *Client
+	client *Client
 	publicConnId string
 	localConn net.Conn
 	proxyConn *ProxyConn
@@ -20,7 +20,7 @@ type TcpWorker struct {
 }
 
 func (worker *TcpWorker) Start() error{
-	conn, err := worker.createConnector()
+	conn, err := worker.client.createConnector()
 	if err != nil {
 		return err
 	}
@@ -28,9 +28,9 @@ func (worker *TcpWorker) Start() error{
 	message := &protol.Protocol{
 		Action: "register_proxy",
 		Headers: map[string]string{
-			"client-id": worker.Client.Id,
+			"client-id": worker.client.Id,
 			"tunnel-id": worker.tunnel.GetId(),
-			"public-connection-id": worker.publicConnId,
+			"pub-conn-id": worker.publicConnId,
 		},
 	}
 	conn.Write(message.ToBytes())
@@ -47,36 +47,13 @@ func (worker *TcpWorker) Start() error{
 	worker.proxyConn.pipe(worker.localConn)
 
 	return nil
-	//return
-	//reader := protol.NewReader(conn)
-	//for {
-	//	messages,_ := reader.Read()
-	//	for _, message := range messages {
-	//		fmt.Println(message.ToString())
-	//		if message.Action == "start_proxy" { // 此时需要等待服务端传送start_proxy
-	//			// 启动代理管道
-	//			worker.proxyConn = &ProxyConn{
-	//				controlConn: conn,
-	//			}
-	//			localConn, dialErr := net.Dial("tcp", worker.tunnel.ResolveAddress())
-	//			if dialErr != nil {
-	//				worker.localConn = localConn
-	//				worker.proxyConn.Pipe(worker.localConn)
-	//			}
-	//			break
-	//		}
-	//	}
-	//}
-
 }
 
-// 创建一个连接器连接控制服务器
-func (worker *TcpWorker) createConnector() (net.Conn, error) {
-	conn, err := net.Dial("tcp", worker.Client.ServerAddress)
-	if err != nil {
-		return conn, err
+// Create one worker
+func newWorker(client *Client, pubConnId string, tunnel tunnel.Tunnel) Worker{
+	return &TcpWorker{
+		client: client,
+		publicConnId: pubConnId,
+		tunnel: tunnel,
 	}
-	return conn, nil
 }
-
-

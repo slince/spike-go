@@ -33,21 +33,17 @@ func (server *Server) Stop(){
 
 // Run the server
 func (server *Server) Run() {
-
 	// register all listeners
 	server.registerListeners()
 	// 监听端口
-	var err error
 	listener, err := net.Listen("tcp", server.Address)
 	if err != nil {
 		panic(err.Error())
 	}
-	server.Logger.Info("The server is running...")
-
-	go server.acceptControlConn(listener) // 接收请求
 	go server.processControlConns()        // 消费所有控制请求
-	// check if closed.
-	<-server.closeChan
+	server.Logger.Info("The server is running...")
+	// 接收请求
+	server.acceptControlConn(listener)
 }
 
 // 接收请求
@@ -80,13 +76,13 @@ func (server *Server) processControlConns() {
 	}
 }
 
-// handle connection from client.
+// handle conn from client.
 func (server *Server) handleControlConn(conn net.Conn) {
-	server.Logger.Info("Accepted a connection.")
+	server.Logger.Info("Accepted a conn.")
 	// 预读多条message
-	reader := protol.NewReader(conn)
+	connCtrl := protol.NewIO(conn)
 	for {
-		message, err := reader.Read()
+		message, err := connCtrl.Read()
 		if err != nil { //如果读取失败则关闭次连接
 			server.Logger.Error(err)
 			client := server.findClientByConn(conn)
@@ -95,7 +91,6 @@ func (server *Server) handleControlConn(conn net.Conn) {
 			}
 			break
 		}
-		fmt.Println(err)
 		server.Logger.Info("Received a message:\r\n" + message.ToString())
 		err = server.handleMessage(message, conn)
 		if err != nil {
@@ -110,7 +105,7 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	ev := event.NewEvent("message", map[string]interface{}{
 		"message":  message,
 		"server": server,
-		"connection": conn,
+		"conn": conn,
 	})
 	server.Dispatcher.Fire(ev)
 
@@ -132,15 +127,10 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	return nil
 }
 
-// Send message to connection
+// Send message to conn
 func (server *Server) sendMessage(connection net.Conn, message *protol.Protocol){
 	jsonString := message.ToString()
 	connection.Write([]byte(jsonString))
-}
-
-// Send message to client
-func (server *Server) sendToClient(client *Client, message *protol.Protocol) {
-	server.sendMessage(client.controlConn, message)
 }
 
 // Checks whether tunnel is registered.
@@ -170,7 +160,7 @@ func (server *Server) findChunkServerByTunId(id string) ChunkServer{
 // find client
 func (server *Server) findClientByConn(conn net.Conn) *Client{
 	for _,client := range server.Clients {
-		if client.controlConn == conn {
+		if client.ctrlConn == conn {
 			return client
 		}
 	}

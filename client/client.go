@@ -35,38 +35,27 @@ type Client struct {
 	controlConn net.Conn
 	// event dispatcher
 	Dispatcher *event.Dispatcher
-	connControl *protol.IO
+	connCtrl  *protol.IO
 }
 
 // Run client
 func (client *Client) Start() {
 	client.registerListeners()
-
-	conn,err := net.Dial("tcp", client.ServerAddress)
+	// Create connect
+	conn,err := client.createConnector()
 	if err != nil {
 		panic(err)
 	}
-
+	// log
 	client.Logger.Info("the client has been connected to the server")
 	client.controlConn = conn
-	client.connControl = protol.NewIO(conn)
+	client.connCtrl = protol.NewIO(conn)
 	client.handleControlConnection()
 }
 
 // close the client
 func (client *Client) Close() {
 
-}
-
-// 发送消息给服务端
-func (client *Client) sendMessage(message *protol.Protocol) (int, error){
-	if client.Id != "" {
-		if message.Headers == nil {
-			message.Headers = make(map[string]string, 1)
-		}
-		message.Headers["client-id"] = client.Id
-	}
-	return client.connControl.Write(message)
 }
 
 // Register all listeners
@@ -81,7 +70,7 @@ func (client *Client) handleControlConnection() {
 	client.sendAuthRequest()
 	for {
 		// 监听消息
-		message, err := client.connControl.Read()
+		message, err := client.connCtrl.Read()
 		if err != nil {
 			client.Logger.Error(err) //忽略读取
 			return
@@ -116,6 +105,17 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 	return nil
 }
 
+// 发送消息给服务端
+func (client *Client) sendMessage(message *protol.Protocol) (int, error){
+	if client.Id != "" {
+		if message.Headers == nil {
+			message.Headers = make(map[string]string, 1)
+		}
+		message.Headers["client-id"] = client.Id
+	}
+	return client.connCtrl.Write(message)
+}
+
 // find tunnel by id
 func (client *Client) findTunnelById(id string) (tunnel.Tunnel, error) {
 	for _, tn := range client.Tunnels {
@@ -139,11 +139,20 @@ func (client *Client) sendAuthRequest() {
 	client.sendMessage(message)
 }
 
+// 创建一个连接器连接控制服务器
+func (client *Client) createConnector() (net.Conn, error) {
+	conn, err := net.Dial("tcp", client.ServerAddress)
+	if err != nil {
+		return conn, err
+	}
+	return conn, nil
+}
+
 func NewClient(configuration *Configuration) *Client {
 	// set logger
 	logger := log.NewLogger()
 	logger.SetLogFile(configuration.Log["file"]).EnableConsole()
-	tunnels := createTunnelsWithTunnelConfiguration(configuration.Tunnels)
+	tunnels := createTunsWithConfig(configuration.Tunnels)
 	return &Client{
 		Id: "",
 		ServerAddress: configuration.ServerAddress,
@@ -155,7 +164,7 @@ func NewClient(configuration *Configuration) *Client {
 }
 
 // 创建tunnel
-func createTunnelsWithTunnelConfiguration(configurations []TunnelConfiguration) []tunnel.Tunnel{
+func createTunsWithConfig(configurations []TunnelConfiguration) []tunnel.Tunnel{
 	var details []map[string]interface{}
 	for _, config := range configurations {
 		details = append(details, map[string]interface{}{

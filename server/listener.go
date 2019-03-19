@@ -25,8 +25,8 @@ func OnMessage(ev *event.Event){
 	msg := ev.Parameters["message"].(*protol.Protocol)
 	// server
 	ser := ev.Parameters["server"].(*Server)
-	// connection
-	conn := ev.Parameters["connection"].(net.Conn)
+	// conn
+	conn := ev.Parameters["conn"].(net.Conn)
 	messageFactory := MessageHandlerFactory{
 		Server: ser,
 		Conn: conn,

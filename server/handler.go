@@ -16,7 +16,7 @@ type MessageHandler interface {
 }
 
 type Handler struct{
-	connection net.Conn
+	conn   net.Conn
 	server *Server
 }
 
@@ -34,7 +34,7 @@ func (hdl *AuthHandler) Handle(message *protol.Protocol) error{
 			Headers: map[string]string{"code": "403"},
 			Body: map[string]interface{}{"error": "bad request"},
 		}
-		hdl.server.sendMessage(hdl.connection, msg)
+		protol.WriteMsg(hdl.conn, msg)
 		return errors.New("bad request")
 	}
 	err := hdl.server.Authentication.Auth(auth.(map[string]interface{}))
@@ -46,7 +46,7 @@ func (hdl *AuthHandler) Handle(message *protol.Protocol) error{
 		}
 	} else {
 		// create one new client
-		client := newClient(hdl.connection)
+		client := newClient(hdl.conn)
 		hdl.server.Clients[client.Id] = client
 		msg = &protol.Protocol{
 			Action: "auth_response",
@@ -54,7 +54,7 @@ func (hdl *AuthHandler) Handle(message *protol.Protocol) error{
 			Body: map[string]interface{}{"client": client},
 		}
 	}
-	hdl.server.sendMessage(hdl.connection, msg)
+	protol.WriteMsg(hdl.conn, msg)
 	return nil
 }
 
@@ -67,7 +67,7 @@ func (hdl *PingHandler) Handle(message *protol.Protocol) error{
 	msg := &protol.Protocol{
 		Action: "pong",
 	}
-	hdl.server.sendMessage(hdl.connection, msg)
+	protol.WriteMsg(hdl.conn, msg)
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (hdl *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 					"tunnel": tun,
 				},
 			}
-			hdl.server.sendMessage(hdl.connection, msg)
+			protol.WriteMsg(hdl.conn, msg)
 			continue
 		}
 		//创建对应的chunk server
@@ -140,7 +140,7 @@ func (hdl *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 				},
 			}
 			hdl.server.Logger.Warn("fail to create chunk server for the tunnel", err)
-			hdl.server.sendMessage(hdl.connection, msg)
+			protol.WriteMsg(hdl.conn, msg)
 			continue
 		}
 		// start chunk server
@@ -159,7 +159,7 @@ func (hdl *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 			Body: map[string]interface{}{"tunnels": regTunns},
 		}
 
-		hdl.server.sendMessage(hdl.connection, msg)
+		protol.WriteMsg(hdl.conn, msg)
 		return nil
 	} else {
 		return errors.New("no tunnel is registered")
@@ -220,12 +220,12 @@ func (hdl *RegisterProxyHandler) Handle(message *protol.Protocol) error{
 	if chunkServer == nil {
 		return fmt.Errorf("the chunk server %s is not found", tunnelId)
 	}
-	pubConnId,ok := message.Headers["public-connection-id"]
+	pubConnId,ok := message.Headers["pub-conn-id"]
 	if !ok { //错误的注册代理协议
 		return fmt.Errorf("missing public id")
 	}
-	// set proxy connection
-	chunkServer.setProxyConn(pubConnId, hdl.connection)
+	// set proxy conn
+	chunkServer.setProxyConn(pubConnId, hdl.conn)
 	return nil
 }
 
