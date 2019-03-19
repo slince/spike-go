@@ -40,7 +40,7 @@ func (hd *AuthResponseHandler) registerTunnel() {
 			"tunnels": hd.client.Tunnels,
 		},
 	}
-	hd.client.SendMessage(message)
+	hd.client.sendMessage(message)
 }
 
 // 注册隧道信息返回处理

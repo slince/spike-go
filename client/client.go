@@ -32,9 +32,10 @@ type Client struct {
 	// Tunnels
 	Tunnels []tunnel.Tunnel
 	// 控制连接
-	ControlConn net.Conn
+	controlConn net.Conn
 	// event dispatcher
 	Dispatcher *event.Dispatcher
+	connControl *protol.IO
 }
 
 // Run client
@@ -47,8 +48,8 @@ func (client *Client) Start() {
 	}
 
 	client.Logger.Info("the client has been connected to the server")
-	client.ControlConn = conn
-
+	client.controlConn = conn
+	client.connControl = protol.NewIO(conn)
 	client.handleControlConnection()
 }
 
@@ -58,14 +59,14 @@ func (client *Client) Close() {
 }
 
 // 发送消息给服务端
-func (client *Client) SendMessage(message *protol.Protocol) (int, error){
+func (client *Client) sendMessage(message *protol.Protocol) (int, error){
 	if client.Id != "" {
 		if message.Headers == nil {
 			message.Headers = make(map[string]string, 1)
 		}
 		message.Headers["client-id"] = client.Id
 	}
-	return client.ControlConn.Write(message.ToBytes())
+	return client.connControl.Write(message)
 }
 
 // Register all listeners
@@ -78,19 +79,15 @@ func (client *Client) registerListeners() {
 func (client *Client) handleControlConnection() {
 	// 第一步获取授权
 	client.sendAuthRequest()
-	reader := protol.NewReader(client.ControlConn)
-
 	for {
 		// 监听消息
-		messages, err := reader.Read()
+		message, err := client.connControl.Read()
 		if err != nil {
 			client.Logger.Error(err) //忽略读取
 			return
 		}
-		for _, message := range messages {
-			client.Logger.Info("Received a message:\r\n" + message.ToString())
-			client.handleMessage(message)
-		}
+		client.Logger.Info("Received a message:\r\n" + message.ToString())
+		client.handleMessage(message)
 	}
 }
 
@@ -139,7 +136,7 @@ func (client *Client) sendAuthRequest() {
 			"auth": client.Auth,
 		},
 	}
-	client.ControlConn.Write([]byte(message.ToString()))
+	client.sendMessage(message)
 }
 
 func NewClient(configuration *Configuration) *Client {

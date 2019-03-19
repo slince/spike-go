@@ -6,9 +6,9 @@ import (
 
 func TestFromJsonString(t *testing.T) {
 	json := `{"action": "register", "headers": {"status": "200"}, "body": {"error": ""}}`
-	protocol, error := FromJsonString(json)
+	protocol, err := CreateFromJson(json)
 
-	if error != nil {
+	if err != nil {
 		t.Errorf("error parse json")
 	}
 
@@ -37,7 +37,7 @@ func TestToString(t *testing.T) {
 
 	expectedJson := `{"action":"register","body":{"error":""},"headers":{"status":"200"}}`
 
-	if json,error := protocol.ToString(); error != nil || json != expectedJson {
+	if json := protocol.ToString(); json != expectedJson {
 		t.Errorf("error tostring")
 	}
 }

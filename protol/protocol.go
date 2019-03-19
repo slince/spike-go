@@ -21,13 +21,17 @@ func (protocol *Protocol) ToString() string {
 }
 
 // Create protocol from json string.
-func FromJsonString(jsonString string) (*Protocol,error){
+func CreateFromJson(jsonString string) (*Protocol,error){
+	return CreateFromBytes([]byte(jsonString))
+}
+
+// Create protocol from bytes buffer.
+func CreateFromBytes(buffer []byte) (*Protocol,error){
 	protocol := &Protocol{}
-	err := json.Unmarshal([]byte(jsonString), protocol)
+	err := json.Unmarshal(buffer, protocol)
 
 	if err != nil {
 		return nil, err
 	}
-
 	return protocol, nil
 }

@@ -33,6 +33,7 @@ func (server *Server) Stop(){
 
 // Run the server
 func (server *Server) Run() {
+
 	// register all listeners
 	server.registerListeners()
 	// 监听端口
@@ -85,7 +86,7 @@ func (server *Server) handleControlConn(conn net.Conn) {
 	// 预读多条message
 	reader := protol.NewReader(conn)
 	for {
-		messages, err := reader.Read()
+		message, err := reader.Read()
 		if err != nil { //如果读取失败则关闭次连接
 			server.Logger.Error(err)
 			client := server.findClientByConn(conn)
@@ -94,9 +95,11 @@ func (server *Server) handleControlConn(conn net.Conn) {
 			}
 			break
 		}
-		for  _, message := range messages {
-			server.Logger.Info("Received a message:\r\n" + message.ToString())
-			server.handleMessage(message, conn)
+		fmt.Println(err)
+		server.Logger.Info("Received a message:\r\n" + message.ToString())
+		err = server.handleMessage(message, conn)
+		if err != nil {
+			conn.Close()
 		}
 	}
 }
@@ -122,10 +125,9 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) err
 	}
 	// 处理消息
 	err := hdl.(MessageHandler).Handle(message)
-	// 有处理错误直接关闭
 	if err != nil {
 		server.Logger.Warn(err)
-		conn.Close()
+		return err
 	}
 	return nil
 }
