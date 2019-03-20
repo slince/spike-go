@@ -32,10 +32,11 @@ type Client struct {
 	// Tunnels
 	Tunnels []tunnel.Tunnel
 	// 控制连接
-	controlConn net.Conn
+	ctrlConn net.Conn
+	// protocol
+	connCtrl *protol.IO
 	// event dispatcher
 	Dispatcher *event.Dispatcher
-	connCtrl  *protol.IO
 }
 
 // Run client
@@ -48,8 +49,8 @@ func (client *Client) Start() {
 	}
 	// log
 	client.Logger.Info("the client has been connected to the server")
-	client.controlConn = conn
-	client.connCtrl = protol.NewIO(conn)
+	client.ctrlConn = conn
+	client.connCtrl = protol.NewIO(client.ctrlConn)
 	client.handleControlConnection()
 }
 
@@ -75,7 +76,7 @@ func (client *Client) handleControlConnection() {
 			client.Logger.Error(err) //忽略读取
 			return
 		}
-		client.Logger.Info("Received a message:\r\n" + message.ToString())
+		client.Logger.Info("Received a message:" + message.ToString())
 		client.handleMessage(message)
 	}
 }
@@ -106,14 +107,14 @@ func (client *Client) handleMessage(message *protol.Protocol) error {
 }
 
 // 发送消息给服务端
-func (client *Client) sendMessage(message *protol.Protocol) (int, error){
+func (client *Client) sendMessage(msg *protol.Protocol) (int, error){
 	if client.Id != "" {
-		if message.Headers == nil {
-			message.Headers = make(map[string]string, 1)
+		if msg.Headers == nil {
+			msg.Headers = make(map[string]string, 1)
 		}
-		message.Headers["client-id"] = client.Id
+		msg.Headers["client-id"] = client.Id
 	}
-	return client.connCtrl.Write(message)
+	return client.connCtrl.Write(msg)
 }
 
 // find tunnel by id

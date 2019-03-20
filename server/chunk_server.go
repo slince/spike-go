@@ -95,6 +95,7 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 			"pub-conn-id": pubConn.Id,
 		},
 	}
+	fmt.Println("request proxy to client")
 	protol.WriteMsg(chunkServer.client.ctrlConn, &msg)
 
 	// 2. 挂起当前公网请求
