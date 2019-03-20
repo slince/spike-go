@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	errorReadError = errors.New("read error")
+	errorBadLength = errors.New("bad protocol length")
 )
 
 // Protocol Reader
@@ -21,29 +21,25 @@ type Reader struct {
 
 // read a message from io.reader
 func (reader *Reader) Read() (protocol *Protocol, err error){
-	var length int64
-	err = binary.Read(reader.reader, binary.BigEndian, &length)
+	// read length bytes
+	lenBuf := make([]byte, 4)
+	_, err = io.ReadFull(reader.reader, lenBuf)
+
 	if err != nil {
+		fmt.Println(err)
+		err = errorBadLength
 		return
 	}
-fmt.Println(length)
-	var readBytes = make([]byte, length)
-	readLength, err := io.ReadFull(reader.reader, readBytes)
+	var length = BytesToInt(lenBuf)
+
+	var conBuf = make([]byte, length)
+	_, err = io.ReadFull(reader.reader, conBuf)
 
 	if err != nil{
 		return
 	}
 	protocol = &Protocol{}
-	err = json.Unmarshal(readBytes, protocol)
-
-	if err != nil {
-		return
-	}
-
-	if int64(readLength) != length {
-		err = errorReadError
-		return
-	}
+	err = json.Unmarshal(conBuf, protocol)
 	return
 }
 
@@ -73,10 +69,16 @@ func NewWriter(writer io.Writer) *Writer{
 }
 
 func IntToBytes(num int) []byte{
-	x := int64(num)
+	x := uint32(num)
 	var buf = bytes.NewBuffer(make([]byte, 0))
 	binary.Write(buf, binary.BigEndian, x)
 	return buf.Bytes()
+}
+
+func BytesToInt(buf []byte) int{
+	var x uint32
+	binary.Read(bytes.NewReader(buf), binary.BigEndian, &x)
+	return int(x)
 }
 
 type IO struct {

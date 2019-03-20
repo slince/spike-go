@@ -9,42 +9,44 @@ import (
 
 type ProxyConn struct {
 	conn net.Conn
-	targetConn net.Conn
 }
 
 // close the proxy conn
 func (proxyConn *ProxyConn) close() {
 	proxyConn.conn.Close()
-	if proxyConn.targetConn != nil {
-		proxyConn.targetConn.Close()
-	}
 }
 
 // 将当前请求管道输出到指定连接
-func (proxyConn *ProxyConn) pipe(conn net.Conn) {
-
-	defer conn.Close()
-	defer proxyConn.conn.Close()
+func (proxyConn *ProxyConn) pipe(localConn net.Conn) {
 
 	var wait = new(sync.WaitGroup)
 	wait.Add(2)
 
 	go func() {
 		for {
-			io.Copy(conn, proxyConn.conn)
-			fmt.Println("readed")
+			_,err := io.Copy(localConn, proxyConn.conn)
+			if err != nil {
+				localConn.Close()
+				fmt.Println("proxy closed")
+				break
+			}
 		}
 		wait.Done()
 	}()
 
 	go func() {
 		for {
-			io.Copy(proxyConn.conn, conn)
-			fmt.Println("copied")
+			_,err := io.Copy(proxyConn.conn, localConn)
+			if err != nil {
+				proxyConn.close()
+				fmt.Println("local closed")
+				break
+			}
 		}
 		wait.Done()
 	}()
 	wait.Wait()
+	fmt.Println("proxy end")
 }
 
 // create new proxy conn

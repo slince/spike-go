@@ -61,11 +61,6 @@ func (chunkServer *TcpChunkServer) acceptConn(listener net.Listener){
 				// handle error
 				continue
 			}
-			//bytes := make([]byte, 1000)
-			//conn.Read(bytes)
-			//bytes,_ := ioutil.ReadAll(conn)
-			//fmt.Println(string(bytes), "end")
-
 			publicConn := newPublicConn(conn)
 			chunkServer.pubConns[publicConn.Id] = publicConn
 			chunkServer.pubConnsChan <- publicConn
@@ -90,6 +85,8 @@ func (chunkServer *TcpChunkServer) processPublicConns(){
 
 // 处理公网请求
 func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
+	chunkServer.server.Logger.Info("Receive a public connection...")
+
 	//1.收到公网请求，请求客户端代理
 	msg := protol.Protocol{
 		Action: "request_proxy",
@@ -109,7 +106,7 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 
 	// 3. 管道请求
 	pubConn.pipe(proxyConn)
-	//delete(chunkServer.pubConnCollection, pubConn.Id)
+	delete(chunkServer.pubConns, pubConn.Id)
 }
 
 // 获取隧道

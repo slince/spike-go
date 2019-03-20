@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/rs/xid"
 	"io"
 	"net"
@@ -22,33 +23,24 @@ func (pubConn *PublicConn) pipe(proxyConn net.Conn) {
 	var wait = sync.WaitGroup{}
 	wait.Add(2)
 
-	go func() { // 从公网请求读数据并写入到代理请求
+	go func() { // 从代理请求读取并写入到公众请求
 		for {
-			//fmt.Println("pub copy")
 			_,err := io.Copy(pubConn.conn, proxyConn)
-			//fmt.Println(string(bytes), "end")
-			//fmt.Println("pub copied")
 			if err != nil {
-				proxyConn.Close()
-				pubConn.conn.Close()
-				panic(err)
+				pubConn.close()
+				fmt.Println("proxy closed")
 				break
 			}
 		}
 		wait.Done()
 	}()
 
-	go func() { // 从代理请求读取并写入到公众请求
+	go func() {  //从公网请求读数据并写入到代理请求
 		for {
-			//fmt.Println("proxy copy")
-			//bytes,err := ioutil.ReadAll(proxyConn)
-			//fmt.Println(string(bytes), "end")
-			//fmt.Println("proxy copied")
 			_,err := io.Copy(proxyConn, pubConn.conn)
 			if err != nil { //读取出错两者都关闭
 				proxyConn.Close()
-				pubConn.conn.Close()
-				panic(err)
+				fmt.Println("public closed")
 				break
 			}
 		}
@@ -56,6 +48,7 @@ func (pubConn *PublicConn) pipe(proxyConn net.Conn) {
 	}()
 
 	wait.Wait()
+	fmt.Println("pub end")
 }
 
 // close

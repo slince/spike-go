@@ -25,7 +25,7 @@ func (worker *TcpWorker) Start() error{
 		return err
 	}
 	// 发送消息给控制服务
-	message := &protol.Protocol{
+	msg := &protol.Protocol{
 		Action: "register_proxy",
 		Headers: map[string]string{
 			"client-id": worker.client.Id,
@@ -33,7 +33,8 @@ func (worker *TcpWorker) Start() error{
 			"pub-conn-id": worker.publicConnId,
 		},
 	}
-	conn.Write(message.ToBytes())
+
+	protol.WriteMsg(conn, msg)
 
 	// 启动代理管道
 	worker.proxyConn = newProxyConn(conn)

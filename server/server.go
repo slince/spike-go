@@ -89,11 +89,11 @@ func (server *Server) handleControlConn(conn net.Conn) {
 			if client != nil {
 				client.close()
 			}
+			conn.Close()
 			break
 		}
 		server.Logger.Info("Received a message:\r\n" + message.ToString())
 		err, breakListen := server.handleMessage(message, conn)
-		fmt.Print(message.Action, breakListen)
 		if err != nil {
 			conn.Close()
 		}
