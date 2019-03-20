@@ -90,10 +90,12 @@ func (hdl *RequestProxyHandler) Handle(message *protol.Protocol) error {
 		return errors.New("bad tunnel")
 	}
 	worker := newWorker(hdl.client, publicConnId, tunnel)
-	err = worker.Start()
-	if err != nil {
-		hdl.client.Logger.Error("fail to create worker for request_proxy message")
-	}
+	go func() {
+		err = worker.Start()
+		if err != nil {
+			hdl.client.Logger.Error("fail to create worker for request_proxy message")
+		}
+	}()
 	return nil
 }
 
