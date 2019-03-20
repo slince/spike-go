@@ -100,8 +100,6 @@ func (chunkServer *TcpChunkServer) handlePubConn(pubConn *PublicConn) {
 	proxyConn := <- pubConn.proxyConnChan //从通道读取代理请求
 	defer close(pubConn.proxyConnChan)
 
-	fmt.Println("read a proxy conn")
-
 	// 3. 管道请求
 	pubConn.pipe(proxyConn)
 	delete(chunkServer.pubConns, pubConn.Id)
@@ -114,7 +112,6 @@ func (chunkServer *TcpChunkServer) getTunnel() tunnel.Tunnel{
 
 // 设置代理链接
 func (chunkServer *TcpChunkServer) setProxyConn(pubConnId string, conn net.Conn) error{
-	fmt.Println("find a proxy conn")
 	if pubConn, ok := chunkServer.pubConns[pubConnId];ok {
 		pubConn.proxyConnChan <- conn
 		return nil

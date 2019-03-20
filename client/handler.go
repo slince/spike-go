@@ -69,8 +69,7 @@ func (hdl *RegisterTunnelResponseHandler) Handle(message *protol.Protocol) error
 			}
 		}
 	}
-
-	hdl.client.Logger.Info("register tunnel ok")
+	hdl.client.Logger.Info("register tunnel success")
 	return nil
 }
 
