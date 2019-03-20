@@ -36,16 +36,16 @@ type TcpChunkServer struct {
 // 启动服务
 func (chunkServer *TcpChunkServer) run() error {
 	// enable listen
-	listener, err := net.Listen("tcp", "127.0.0.1:" +
+	listener, err := net.Listen("tcp", "0.0.0.0:" +
 		chunkServer.tunnel.ServerPort)
 
 	if err != nil {
 		return errors.New("failed to create chunk server")
 	}
-	// listener accept
-	go chunkServer.acceptConn(listener)
 	// process public conn
 	go chunkServer.processPublicConns()
+	// listener accept
+	chunkServer.acceptConn(listener)
 	return nil
 }
 
@@ -54,7 +54,7 @@ func (chunkServer *TcpChunkServer) acceptConn(listener net.Listener){
 		select {
 		case <- chunkServer.closeChan:
 			listener.Close()
-			break
+			return
 		default:
 			conn, err := listener.Accept()
 			if err != nil {
@@ -75,18 +75,17 @@ func (chunkServer *TcpChunkServer) processPublicConns(){
 			for _,pubConn := range chunkServer.pubConns {
 				pubConn.close()
 			}
-			break
+			return
 		case publicConn := <- chunkServer.pubConnsChan :
 			//处理请求
-			go chunkServer.handleConnection(publicConn)
+			go chunkServer.handlePubConn(publicConn)
 		}
 	}
 }
 
 // 处理公网请求
-func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
-	chunkServer.server.Logger.Info("Receive a public connection...")
-
+func (chunkServer *TcpChunkServer) handlePubConn(pubConn *PublicConn) {
+	chunkServer.server.Logger.Info("Received a public conn...")
 	//1.收到公网请求，请求客户端代理
 	msg := protol.Protocol{
 		Action: "request_proxy",
@@ -95,11 +94,9 @@ func (chunkServer *TcpChunkServer) handleConnection(pubConn *PublicConn) {
 			"pub-conn-id": pubConn.Id,
 		},
 	}
-	fmt.Println("request proxy to client")
 	protol.WriteMsg(chunkServer.client.ctrlConn, &msg)
 
 	// 2. 挂起当前公网请求
-	//var proxyConn net.ctrlConn
 	proxyConn := <- pubConn.proxyConnChan //从通道读取代理请求
 	defer close(pubConn.proxyConnChan)
 

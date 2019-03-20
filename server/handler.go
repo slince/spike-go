@@ -143,10 +143,10 @@ func (hdl *RegisterTunnelHandler) Handle(message *protol.Protocol) error{
 			protol.WriteMsg(hdl.conn, msg)
 			continue
 		}
-		// start chunk server
-		chunkServer.run()
 		regTunns = append(regTunns, tun)
 		chunkServers = append(chunkServers, chunkServer)
+		// start chunk server
+		go chunkServer.run()
 	}
 	//如果有成功
 	if len(regTunns) > 0 {
@@ -212,13 +212,13 @@ func (hdl *RegisterProxyHandler) Handle(message *protol.Protocol) error{
 		return errors.New("the client is not authorized")
 	}
 
-	tunnelId, ok := message.Headers["tunnel-id"]
+	tunId, ok := message.Headers["tunnel-id"]
 	if !ok {
 		return fmt.Errorf("missing tunnel id")
 	}
-	chunkServer := hdl.server.findChunkServerByTunId(tunnelId)
+	chunkServer := hdl.server.findChunkServerByTunId(tunId)
 	if chunkServer == nil {
-		return fmt.Errorf("the chunk server %s is not found", tunnelId)
+		return fmt.Errorf("the chunk server %s is not found", tunId)
 	}
 	pubConnId,ok := message.Headers["pub-conn-id"]
 	if !ok { //错误的注册代理协议

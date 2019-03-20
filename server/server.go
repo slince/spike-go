@@ -79,7 +79,7 @@ func (server *Server) processControlConns() {
 // handle conn from client.
 func (server *Server) handleControlConn(conn net.Conn) {
 	server.Logger.Info("Accepted a conn.")
-	// 预读多条message
+
 	connCtrl := protol.NewIO(conn)
 	for {
 		message, err := connCtrl.Read()
@@ -92,12 +92,14 @@ func (server *Server) handleControlConn(conn net.Conn) {
 			conn.Close()
 			break
 		}
-		server.Logger.Info("Received a message:\r\n" + message.ToString())
+		server.Logger.Info("Received a message:" + message.ToString())
 		err, breakListen := server.handleMessage(message, conn)
-		if err != nil {
+		if err != nil { // if handle error
+			server.Logger.Error(err)
 			conn.Close()
+			break
 		}
-		if breakListen { // 如果确认不再由系统监听
+		if breakListen { // Check if listen continue
 			break
 		}
 	}
@@ -118,14 +120,10 @@ func (server *Server) handleMessage(message *protol.Protocol, conn net.Conn) (er
 	if !ok {
 		ev = event.NewEvent("unknownMessage", map[string]interface{}{"message":  message})
 		server.Dispatcher.Fire(ev)
-		server.Logger.Warn("receive a unknown message")
 		err = fmt.Errorf("receive a unknown message")
 	}
 	// 处理消息
 	err = hdl.(MessageHandler).Handle(message)
-	if err != nil {
-		server.Logger.Warn(err)
-	}
 	if isBreakListen, ok := ev.Parameters["break_listen"]; ok {
 		breakListen = isBreakListen.(bool)
 	}
