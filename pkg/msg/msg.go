@@ -11,7 +11,7 @@ const (
 	TypeLoginRes
 )
 
-var p = transfer.newParser()
+var p = transfer.NewParser()
 
 // ClientPing 客户端pin消息
 type ClientPing struct {

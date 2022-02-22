@@ -63,6 +63,6 @@ func (f *Factory) denormalize(msg Message) (command Command, err error) {
 }
 
 // NewFactory 工厂方法，创建新的命令工厂
-func newFactory() *Factory {
+func NewFactory() *Factory {
 	return new(Factory)
 }

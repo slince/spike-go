@@ -12,8 +12,8 @@ type Bridge struct {
 	ft     *Factory
 }
 
-var ft = newFactory()
-var parser = newParser()
+var ft = NewFactory()
+var parser = NewParser()
 
 /**
  * 写入命令到该通道

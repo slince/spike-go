@@ -84,6 +84,6 @@ func (p *Parser) meta(r io.Reader, msg Message) error {
 	return nil
 }
 
-func newParser() *Parser {
+func NewParser() *Parser {
 	return new(Parser)
 }
