@@ -40,10 +40,9 @@ func (b *Bridge) Read() (command Command, err error) {
 	return
 }
 
-func (b *Bridge) Supports(types map[MsgType]Command){
+func (b *Bridge) Supports(types map[MsgType]Command) {
 	b.ft.RegisterTypes(types)
 }
-
 
 func NewBridge(ft *Factory, reader io.Reader, writer io.Writer) *Bridge {
 	return &Bridge{reader, writer, ft}

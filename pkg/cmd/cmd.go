@@ -41,12 +41,24 @@ type LoginRes struct {
 }
 
 type RegisterTunnel struct {
-	Tunnels []tunnel.Tunnel
+	ClientId string          `json:"client_id"`
+	Tunnels  []tunnel.Tunnel `json:"tunnels"`
 }
 
 type RegisterTunnelRes struct {
 	Tunnels []tunnel.Tunnel
-	Error string `json:error`
+	Error   string `json:error`
 }
 
+type RequestProxy struct {
+	Tunnel tunnel.Tunnel
+}
 
+type RegisterProxy struct {
+	ClientId string `json:"client_id"`
+	Tunnel   tunnel.Tunnel
+}
+
+type StartProxy struct {
+	Tunnel tunnel.Tunnel
+}
