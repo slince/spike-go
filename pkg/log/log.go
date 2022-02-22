@@ -16,6 +16,7 @@ func NewLogger() *Logger{
 func (logger *Logger) EnableConsole() *Logger{
 	var log = logrus.New()
 	log.Out = os.Stdout
+	log.Level = logrus.TraceLevel
 	logger.loggers = append(logger.loggers, log)
 	return logger
 }

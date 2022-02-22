@@ -1,8 +1,6 @@
 package transfer
 
 import (
-	"bytes"
-	"encoding/binary"
 	"io"
 )
 
@@ -22,15 +20,12 @@ func (b *Bridge) Write(command Command) error {
 	if err != nil {
 		return err
 	}
-
-	buf := bytes.NewBuffer(nil)
-	err = binary.Write(buf, binary.BigEndian, msg.length)
+	buf, err := parser.pack(msg)
 	if err != nil {
 		return err
 	}
-
-	buf.Write(msg.body)
-	return nil
+	_, err = b.writer.Write(buf)
+	return err
 }
 
 /**
@@ -41,7 +36,6 @@ func (b *Bridge) Read() (command Command, err error) {
 	if err != nil {
 		return
 	}
-
 	command, err = b.ft.denormalize(msg)
 	return
 }

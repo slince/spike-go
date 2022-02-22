@@ -68,6 +68,7 @@ func (ser *Server) Start() error {
 			logger.Warn("Failed to accept connection: ", err)
 			continue
 		}
+		logger.Info("Accept a connection from : ", conn.RemoteAddr())
 		go ser.handleConn(conn)
 	}
 }
@@ -81,6 +82,7 @@ func (ser *Server) handleConn(conn net.Conn) {
 			conn.Close()
 			return
 		}
+		logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ClientPing:
 			err = ser.handlePing(command)
@@ -94,9 +96,9 @@ func (ser *Server) sendCommand(client *Client, command transfer.Command) error {
 	client.ActiveAt = time.Now()
 	err := client.Bridge.Write(command)
 	if err != nil {
-		return nil
+		return err
 	}
-	return err
+	return nil
 }
 
 func (ser *Server) handlePing(m *cmd.ClientPing) error {
@@ -135,7 +137,7 @@ func NewServer(host string, port int, au auth.Auth) *Server {
 	return &Server{
 		Host:    host,
 		Port:    port,
-		Clients: make([]*Client, 5),
+		Clients: make([]*Client, 0),
 		Auth:    au,
 	}
 }

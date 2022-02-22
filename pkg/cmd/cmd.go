@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/slince/spike/pkg/transfer"
+	"github.com/slince/spike/pkg/tunnel"
 )
 
 const (
@@ -26,19 +27,11 @@ func (c *ClientPing) GetType() transfer.MsgType {
 type ServerPong struct {
 }
 
-func (s *ServerPong) GetType() transfer.MsgType {
-	return TypePong
-}
-
 // Login 登录
 type Login struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Version  string `json:"version"`
-}
-
-func (s *Login) GetType() transfer.MsgType {
-	return TypeLogin
 }
 
 // LoginRes 登录结果
@@ -47,6 +40,13 @@ type LoginRes struct {
 	Error    string `json:"error"`
 }
 
-func (s *LoginRes) GetType() transfer.MsgType {
-	return TypeLoginRes
+type RegisterTunnel struct {
+	Tunnels []tunnel.Tunnel
 }
+
+type RegisterTunnelRes struct {
+	Tunnels []tunnel.Tunnel
+	Error string `json:error`
+}
+
+

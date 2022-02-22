@@ -50,7 +50,7 @@ func (cli *Client) sendCommand(command transfer.Command) error{
 }
 
 func (cli *Client) login() error {
-	return cli.sendCommand(&cmd.Login{
+	return cli.sendCommand(cmd.Login{
 		Username: cli.Username,
 		Password: cli.Password,
 		Version: cli.Version,
@@ -63,11 +63,13 @@ func (cli *Client) handleConn() error{
 		if err != nil {
 			return err
 		}
+		logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ServerPong:
 		case *cmd.LoginRes:
 			if len(command.ClientId) > 0 {
 				cli.Id = command.ClientId
+				logger.Info("The client is connected to the server, client id:", cli.Id)
 			} else {
 				logger.Error("Failed to logged to the server: ", err)
 				return err
