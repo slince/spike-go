@@ -1,11 +1,19 @@
 package client
 
 import (
-	"fmt"
-	"github.com/slince/spike/pkg/msg"
+	"github.com/slince/spike/pkg/cmd"
+	"github.com/slince/spike/pkg/log"
+	"github.com/slince/spike/pkg/transfer"
 	"net"
 	"strconv"
+	"time"
 )
+
+var logger = log.NewLogger()
+
+func init()  {
+	logger.EnableConsole()
+}
 
 type Client struct {
 	Id string
@@ -14,28 +22,35 @@ type Client struct {
 	Username string
 	Password string
 	Conn net.Conn
+	Bridge *transfer.Bridge
 	Version string
+	LastActiveAt time.Time
 }
 
-func (cli *Client) Start() error{
+func (cli *Client) Start() (err error){
 	var address = cli.Host + ":" + strconv.Itoa(cli.Port)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		return err
+		return
 	}
 	cli.Conn = conn
-	cli.login()
+	cli.Bridge = transfer.NewBridge(ft, conn, conn)
+	err = cli.login()
+	if err != nil {
+		return
+	}
 	err = cli.handleConn()
+	return
+}
+
+func (cli *Client) sendCommand(command transfer.Command) error{
+	err := cli.Bridge.Write(command)
+	cli.LastActiveAt = time.Now()
 	return err
 }
 
-func (cli *Client) sendMsg(m interface{}) error{
-	err := msg.WriteMsg(cli.Conn, m)
-	return err
-}
-
-func (cli *Client) login(){
-	cli.sendMsg(&msg.Login{
+func (cli *Client) login() error {
+	return cli.sendCommand(&cmd.Login{
 		Username: cli.Username,
 		Password: cli.Password,
 		Version: cli.Version,
@@ -44,17 +59,18 @@ func (cli *Client) login(){
 
 func (cli *Client) handleConn() error{
 	for {
-		rawMsg, err := msg.ReadMsg(cli.Conn)
+		command, err := cli.Bridge.Read()
 		if err != nil {
 			return err
 		}
-		switch m := rawMsg.(type) {
-		case *msg.ServerPong:
-		case *msg.LoginRes:
-			if len(m.ClientId) > 0 {
-				cli.Id = m.ClientId
+		switch command := command.(type) {
+		case *cmd.ServerPong:
+		case *cmd.LoginRes:
+			if len(command.ClientId) > 0 {
+				cli.Id = command.ClientId
 			} else {
-				return fmt.Errorf("login failed: %s", m.Error)
+				logger.Error("Failed to logged to the server: ", err)
+				return err
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package server
+package client
 
 import (
 	"github.com/slince/spike/pkg/cmd"
@@ -6,6 +6,7 @@ import (
 )
 
 var ft = transfer.NewFactory()
+
 var types = map[transfer.MsgType]transfer.Command{
 	cmd.TypePing:     cmd.ClientPing{},
 	cmd.TypePong:     cmd.ServerPong{},
@@ -16,4 +17,3 @@ var types = map[transfer.MsgType]transfer.Command{
 func init(){
 	ft.RegisterTypes(types)
 }
-

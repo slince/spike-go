@@ -12,14 +12,13 @@ type Bridge struct {
 	ft     *Factory
 }
 
-var ft = NewFactory()
 var parser = NewParser()
 
 /**
  * 写入命令到该通道
  */
 func (b *Bridge) Write(command Command) error {
-	msg, err := ft.normalize(command)
+	msg, err := b.ft.normalize(command)
 	if err != nil {
 		return err
 	}
@@ -43,13 +42,15 @@ func (b *Bridge) Read() (command Command, err error) {
 		return
 	}
 
-	command, err = ft.denormalize(msg)
+	command, err = b.ft.denormalize(msg)
 	return
 }
 
-/**
- * 创建通道
- */
-func NewBridge(reader io.Reader, writer io.Writer) *Bridge {
+func (b *Bridge) Supports(types map[MsgType]Command){
+	b.ft.RegisterTypes(types)
+}
+
+
+func NewBridge(ft *Factory, reader io.Reader, writer io.Writer) *Bridge {
 	return &Bridge{reader, writer, ft}
 }

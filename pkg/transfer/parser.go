@@ -31,7 +31,7 @@ type Parser struct {
 
 func (p *Parser) parse(r io.Reader) (msg Message, err error) {
 	msg = Message{}
-	err = p.meta(r, msg)
+	err = p.meta(r, &msg)
 	if err != nil {
 		return
 	}
@@ -64,7 +64,7 @@ func (p *Parser) pack(msg Message) (buffer []byte, err error) {
 	return
 }
 
-func (p *Parser) meta(r io.Reader, msg Message) error {
+func (p *Parser) meta(r io.Reader, msg *Message) error {
 	buffer := make([]byte, 1)
 	_, err := r.Read(buffer)
 

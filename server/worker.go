@@ -19,8 +19,9 @@ func (w *Worker) Start() (err error){
 		return
 	}
 	for {
-		conn, err := socket.Accept()
-		if err != nil {
+		conn, err1 := socket.Accept()
+		if err1 != nil {
+			err = err1
 			return
 		}
 		go w.handleConn(conn)

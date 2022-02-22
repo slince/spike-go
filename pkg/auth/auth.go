@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"github.com/slince/spike/pkg/msg"
+	"github.com/slince/spike/pkg/cmd"
 )
 
 type Auth interface {
-	Check(login *msg.Login) User
+	Check(login *cmd.Login) User
 }
 
 type SimpleAuth struct {
@@ -13,7 +13,7 @@ type SimpleAuth struct {
 	a     string
 }
 
-func (au *SimpleAuth) Check(login *msg.Login) User {
+func (au *SimpleAuth) Check(login *cmd.Login) User {
 	for _, u := range au.Users {
 		if u.Password == login.Password && u.Username == login.Username {
 			return u
