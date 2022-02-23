@@ -20,6 +20,27 @@ type Client struct {
 	Version string
 	LastActiveAt time.Time
 	logger *log.Logger
+	handler *Handler
+}
+
+func NewClient(config Configuration) (*Client, error){
+	var logger, err = log.NewLogger(config.Log)
+	if err != nil {
+		return nil, err
+	}
+	var cli = &Client{
+		Host:     config.Host,
+		Port:     config.Port,
+		User: config.Auth,
+		Version:  "0.0.1",
+		LastActiveAt: time.Now(),
+		logger: logger,
+	}
+	cli.handler = &Handler{
+		client: cli,
+		config: config,
+	}
+	return cli, err
 }
 
 func (cli *Client) Start() (err error){
@@ -34,6 +55,10 @@ func (cli *Client) Start() (err error){
 	if err != nil {
 		return
 	}
+	err = cli.handler.registerTunnels()
+	if err != nil {
+		return
+	}
 	err = cli.handleConn()
 	return
 }
@@ -45,7 +70,7 @@ func (cli *Client) sendCommand(command transfer.Command) error{
 }
 
 func (cli *Client) login() error {
-	return cli.sendCommand(cmd.Login{
+	return cli.sendCommand(&cmd.Login{
 		Username: cli.User.Username,
 		Password: cli.User.Password,
 		Version: cli.Version,
@@ -71,19 +96,4 @@ func (cli *Client) handleConn() error{
 			}
 		}
 	}
-}
-
-func NewClient(config Configuration) (*Client, error){
-	var logger, err = log.NewLogger(config.Log)
-	if err != nil {
-		return nil, err
-	}
-	var cli = &Client{
-		Host:     config.Host,
-		Port:     config.Port,
-		User: config.Auth,
-		Version:  "0.0.1",
-		logger: logger,
-	}
-	return cli, err
 }

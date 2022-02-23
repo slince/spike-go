@@ -10,55 +10,59 @@ const (
 	TypePong
 	TypeLogin
 	TypeLoginRes
+	TypeRegisterTunnel
+	TypeRegisterTunnelRes
+	TypeRequestProxy
+	TypeRegisterProxy
+	TypeStartProxy
 )
 
-var p = transfer.NewParser()
-
-// ClientPing 客户端pin消息
 type ClientPing struct {
+	transfer.BaseCommand
 	ClientId string `json:"client_id"`
 }
 
-func (c *ClientPing) GetType() transfer.MsgType {
-	return TypePing
-}
-
-// ServerPong 服务端响应
 type ServerPong struct {
+	transfer.BaseCommand
 }
 
-// Login 登录
 type Login struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Version  string `json:"version"`
+	transfer.BaseCommand
+	Username string
+	Password string
+	Version  string
 }
 
-// LoginRes 登录结果
 type LoginRes struct {
-	ClientId string `json:"client_id"`
-	Error    string `json:"error"`
+	transfer.BaseCommand
+	ClientId string
+	Error    string
 }
 
 type RegisterTunnel struct {
-	ClientId string          `json:"client_id"`
-	Tunnels  []tunnel.Tunnel `json:"tunnels"`
+	transfer.BaseCommand
+	ClientId string
+	Tunnels  []tunnel.Tunnel
 }
 
 type RegisterTunnelRes struct {
+	transfer.BaseCommand
 	Tunnels []tunnel.Tunnel
-	Error   string `json:error`
+	Error   string
 }
 
 type RequestProxy struct {
+	transfer.BaseCommand
 	Tunnel tunnel.Tunnel
 }
 
 type RegisterProxy struct {
-	ClientId string `json:"client_id"`
+	transfer.BaseCommand
+	ClientId string
 	Tunnel   tunnel.Tunnel
 }
 
 type StartProxy struct {
+	transfer.BaseCommand
 	Tunnel tunnel.Tunnel
 }

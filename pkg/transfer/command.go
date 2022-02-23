@@ -14,6 +14,18 @@ var (
 )
 
 type Command interface {
+	setRawBody(body  []byte)
+}
+
+type BaseCommand struct {
+	rawBody []byte
+}
+
+func (c *BaseCommand) String() string{
+	return string(c.rawBody)
+}
+func (c *BaseCommand) setRawBody(body []byte){
+	c.rawBody = body
 }
 
 type Factory struct {
@@ -21,9 +33,6 @@ type Factory struct {
 	types    map[reflect.Type]MsgType
 }
 
-/**
- * 注册支持的命令类型
- */
 func (f *Factory) RegisterTypes(types map[MsgType]Command) {
 	for msgType, command := range types {
 		f.commands[msgType] = reflect.TypeOf(command)
@@ -31,9 +40,6 @@ func (f *Factory) RegisterTypes(types map[MsgType]Command) {
 	}
 }
 
-/**
- * 将自定义命令序列化成message对象
- */
 func (f *Factory) normalize(command Command) (msg Message, err error) {
 	msgType, ok := f.types[reflect.TypeOf(command)]
 	if !ok {
@@ -48,9 +54,6 @@ func (f *Factory) normalize(command Command) (msg Message, err error) {
 	return
 }
 
-/**
- * 将message反序列化成command
- */
 func (f *Factory) denormalize(msg Message) (command Command, err error) {
 	t, ok := f.commands[msg.msgType]
 	if !ok {
@@ -59,10 +62,10 @@ func (f *Factory) denormalize(msg Message) (command Command, err error) {
 	}
 	command = reflect.New(t).Interface().(Command)
 	err = json.Unmarshal(msg.body, command)
+	command.setRawBody(msg.body)
 	return
 }
 
-// NewFactory 工厂方法，创建新的命令工厂
 func NewFactory() *Factory {
 	return &Factory{
 		make(map[MsgType]reflect.Type, 0),

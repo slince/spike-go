@@ -135,7 +135,7 @@ func (ser *Server) handlePing(m *cmd.ClientPing) error {
 		return err
 	}
 	client.ActiveAt = time.Now()
-	return ser.sendCommand(client, cmd.ServerPong{})
+	return ser.sendCommand(client, &cmd.ServerPong{})
 }
 
 func (ser *Server) handleLogin(command *cmd.Login, conn net.Conn, bridge *transfer.Bridge) (err error) {
@@ -144,9 +144,9 @@ func (ser *Server) handleLogin(command *cmd.Login, conn net.Conn, bridge *transf
 		client := NewClient(conn, bridge)
 		ser.lock.Lock()
 		ser.Clients[conn] = client
-		err = ser.sendCommand(client, cmd.LoginRes{ClientId: client.Id})
+		err = ser.sendCommand(client, &cmd.LoginRes{ClientId: client.Id})
 	} else {
-		err = bridge.Write(cmd.LoginRes{ClientId: "", Error: "cannot verify your identify"})
+		err = bridge.Write(&cmd.LoginRes{ClientId: "", Error: "cannot verify your identify"})
 	}
 	return
 }

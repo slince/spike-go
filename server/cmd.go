@@ -7,10 +7,10 @@ import (
 
 var ft = transfer.NewFactory()
 var types = map[transfer.MsgType]transfer.Command{
-	cmd.TypePing:     cmd.ClientPing{},
-	cmd.TypePong:     cmd.ServerPong{},
-	cmd.TypeLogin:    cmd.Login{},
-	cmd.TypeLoginRes: cmd.LoginRes{},
+	cmd.TypePing:     &cmd.ClientPing{},
+	cmd.TypeLogin:    &cmd.Login{},
+	cmd.TypeRegisterTunnel: &cmd.RegisterTunnel{},
+	cmd.TypeRegisterProxy: &cmd.RegisterProxy{},
 }
 
 func init(){

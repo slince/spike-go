@@ -61,7 +61,7 @@ func (w *Worker) AddProxyConn(conn net.Conn) {
 }
 
 func (w *Worker) requestProxy() error {
-	return w.bridge.Write(cmd.RequestProxy{Tunnel: w.tun})
+	return w.bridge.Write(&cmd.RequestProxy{Tunnel: w.tun})
 }
 
 func (w *Worker) handleConn(con net.Conn) {
