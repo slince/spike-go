@@ -12,6 +12,11 @@ var types = map[transfer.MsgType]transfer.Command{
 	cmd.TypeLoginRes: &cmd.LoginRes{},
 	cmd.TypeRegisterTunnelRes: &cmd.RegisterTunnelRes{},
 	cmd.TypeRequestProxy: &cmd.RequestProxy{},
+
+	cmd.TypePing:     &cmd.ClientPing{},
+	cmd.TypeLogin:    &cmd.Login{},
+	cmd.TypeRegisterTunnel: &cmd.RegisterTunnel{},
+	cmd.TypeRegisterProxy: &cmd.RegisterProxy{},
 }
 
 func init(){

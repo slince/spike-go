@@ -60,7 +60,7 @@ func (f *Factory) denormalize(msg Message) (command Command, err error) {
 		err = errMsgType
 		return
 	}
-	command = reflect.New(t).Interface().(Command)
+	command = reflect.New(t.Elem()).Interface().(Command)
 	err = json.Unmarshal(msg.body, command)
 	command.setRawBody(msg.body)
 	return
