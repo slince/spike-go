@@ -9,79 +9,96 @@ type Logger struct {
 	loggers [] *logrus.Logger
 }
 
-func NewLogger() *Logger{
-	return &Logger{}
+type Config struct {
+	Console bool
+	File  string
+	Level string
 }
 
-func (logger *Logger) EnableConsole() *Logger{
+func NewLogger(config Config) (logger *Logger, err error){
+	var level logrus.Level
+	level, err = logrus.ParseLevel(config.Level)
+	if err != nil {
+		return
+	}
+	logger = new(Logger)
+	if config.Console {
+		logger.EnableConsole(level)
+	}
+	if len(config.File) > 0 {
+		err = logger.SetLogFile(config.File, level)
+	}
+	return
+}
+
+func (l *Logger) EnableConsole(level logrus.Level){
 	var log = logrus.New()
 	log.Out = os.Stdout
-	log.Level = logrus.TraceLevel
-	logger.loggers = append(logger.loggers, log)
-	return logger
+	log.Level = level
+	l.loggers = append(l.loggers, log)
 }
 
-func (logger *Logger) SetLogFile(logfile string) *Logger{
+func (l *Logger) SetLogFile(logfile string, level logrus.Level) error {
 	file, err := os.OpenFile(logfile, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	log := logrus.New()
-	log.Out = file
-	logger.loggers = append(logger.loggers, log)
-	return logger
+	var logger = logrus.New()
+	logger.Out = file
+	l.loggers = append(l.loggers, logger)
+	return nil
 }
 
-func (logger *Logger) Trace(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Trace(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Trace(args...)
 	}
 }
 
-func (logger *Logger) Debug(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Debug(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Debug(args...)
 	}
 }
 
-func (logger *Logger) Print(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Print(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Print(args...)
 	}
 }
 
-func (logger *Logger) Info(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Info(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Info(args...)
 	}
 }
 
-func (logger *Logger) Warn(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Warn(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Warn(args...)
 	}
 }
 
-func (logger *Logger) Warning(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Warning(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Warning(args...)
 	}
 }
 
-func (logger *Logger) Error(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Error(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Error(args...)
 	}
 }
 
-func (logger *Logger) Panic(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Panic(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Panic(args...)
 	}
 }
 
-func (logger *Logger) Fatal(args ...interface{}) {
-	for  _, log := range logger.loggers {
+func (l *Logger) Fatal(args ...interface{}) {
+	for  _, log := range l.loggers {
 		log.Fatal(args...)
 	}
 }

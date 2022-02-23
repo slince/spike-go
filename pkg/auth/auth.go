@@ -9,19 +9,19 @@ type Auth interface {
 }
 
 type SimpleAuth struct {
-	Users []*GenericUser
+	Users []GenericUser
 	a     string
 }
 
 func (au *SimpleAuth) Check(login *cmd.Login) User {
 	for _, u := range au.Users {
 		if u.Password == login.Password && u.Username == login.Username {
-			return u
+			return &u
 		}
 	}
 	return nil
 }
 
-func NewSimpleAuth(users []*GenericUser) *SimpleAuth {
+func NewSimpleAuth(users []GenericUser) *SimpleAuth {
 	return &SimpleAuth{Users: users}
 }

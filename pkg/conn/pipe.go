@@ -6,53 +6,50 @@ import (
 	"sync"
 )
 
-type Pipe struct {
-	src        io.Reader
-	dst        io.Writer
-	readError  func(src io.Reader)
-	writeError func(dst io.Writer)
-}
-
-func NewPipe(src io.Reader, dst io.Writer, readError func(src io.Reader), writeError func(dst io.Writer)) *Pipe {
-	return &Pipe{
-		src:        src,
-		dst:        dst,
-		readError:  readError,
-		writeError: writeError,
-	}
-}
-
-func (p *Pipe) Pipe() {
+func copy(dst io.Writer, src io.Reader) (copied int64, err error, readErr bool) {
+	var buf = make([]byte, 32 * 1024)
 	for {
-		var buf = make([]byte, 10)
-		var _, err = p.src.Read(buf)
-		if err != nil {
-			_, err = p.dst.Write(buf)
-			if err != nil {
-				continue
-			} else {
-				p.writeError(p.dst)
+		read, err1 := src.Read(buf)
+		if read > 0 {
+			write, err2 := dst.Write(buf[0:read])
+			copied += int64(write)
+			if err2 != nil {
+				err = err2
+				readErr = false
+				break
 			}
-		} else {
-			p.readError(p.src)
+			if read != write {
+				err = io.ErrShortWrite
+				readErr = false
+				break
+			}
 		}
-		break
+		if err1 != nil {
+			if err1 != io.EOF {
+				err = err1
+			}
+			readErr = true
+			break
+		}
 	}
+	return
 }
 
-func Combine(conn1 net.Conn, conn2 net.Conn, readError func(src io.Reader), writeError func(dst io.Writer)) {
+func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(con net.Conn)) (fromCopied int64, toCopied int64) {
 	var wait sync.WaitGroup
+	var pipe = func(conn1 net.Conn, conn2 net.Conn, copied *int64){
+		defer wait.Done()
+		var readErr bool
+		*copied, _, readErr = copy(conn2, conn1)
+		if readErr {
+			errCallback(conn1)
+		} else {
+			errCallback(conn2)
+		}
+	}
+	go pipe(conn1, conn2, &fromCopied)
+	go pipe(conn2, conn1, &toCopied)
 	wait.Add(2)
-	go (func() {
-		defer wait.Done()
-		//var pipe = NewPipe(conn1, conn2, readError, writeError)
-		//pipe.Pipe()
-		io.Copy(conn2, conn1)
-	})()
-	go (func() {
-		defer wait.Done()
-		var pipe = NewPipe(conn2, conn1, readError, writeError)
-		pipe.Pipe()
-	})()
 	wait.Wait()
+	return
 }

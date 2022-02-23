@@ -14,12 +14,6 @@ import (
 	"time"
 )
 
-var logger = log.NewLogger()
-
-func init() {
-	logger.EnableConsole()
-}
-
 type Client struct {
 	Id            string
 	RemoteAddress string
@@ -30,8 +24,6 @@ type Client struct {
 }
 
 func NewClient(conn net.Conn, bridge *transfer.Bridge) *Client {
-	//var bridge = transfer.NewBridge(ft, conn, conn)
-
 	return &Client{
 		xid.New().String(),
 		conn.RemoteAddr().String(),
@@ -49,16 +41,24 @@ type Server struct {
 	Auth    auth.Auth
 	Workers map[tunnel.Tunnel]*Worker
 	lock    sync.Mutex
+	logger *log.Logger
 }
 
-func NewServer(host string, port int, au auth.Auth) *Server {
-	return &Server{
-		Host:    host,
-		Port:    port,
+func NewServer(cfg Configuration) (*Server, error) {
+	var au = auth.NewSimpleAuth(cfg.Users)
+	var logger, err = log.NewLogger(cfg.Log)
+	if err != nil {
+		return nil, err
+	}
+	var ser =  &Server{
+		Host:    cfg.Host,
+		Port:    cfg.Port,
 		Clients: make(map[net.Conn]*Client, 0),
 		Auth:    au,
 		Workers: make(map[tunnel.Tunnel]*Worker, 0),
+		logger: logger,
 	}
+	return ser, nil
 }
 
 func (ser *Server) GetClient(id string) (*Client, error) {
@@ -76,14 +76,14 @@ func (ser *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	logger.Info("The server is running on " + address)
+	ser.logger.Info("The server is running on " + address)
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
-			logger.Warn("Failed to accept connection: ", err)
+			ser.logger.Warn("Failed to accept connection: ", err)
 			continue
 		}
-		logger.Info("Accept a connection from : ", conn.RemoteAddr())
+		ser.logger.Info("Accept a connection from : ", conn.RemoteAddr())
 		go ser.handleConn(conn)
 	}
 }
@@ -93,7 +93,7 @@ func (ser *Server) handleConn(conn net.Conn) {
 	for {
 		command, err := bridge.Read()
 		if err != nil {
-			logger.Warn("Failed to read command: ", err)
+			ser.logger.Warn("Failed to read command: ", err)
 			if client, ok := ser.Clients[conn]; ok {
 				err = ser.closeClient(client)
 				if err != nil {
@@ -106,7 +106,7 @@ func (ser *Server) handleConn(conn net.Conn) {
 			}
 			return
 		}
-		logger.Trace("Receive a command:", command)
+		ser.logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ClientPing:
 			err = ser.handlePing(command)
@@ -159,8 +159,8 @@ func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn,
 	}
 	ser.lock.Lock()
 	for _, tun := range command.Tunnels {
-		ser.Workers[tun] = newWorker(tun, conn, bridge)
-		logger.Info("Starting the worker for tunnel ", tun.Id)
+		ser.Workers[tun] = newWorker(ser, tun, conn, bridge)
+		ser.logger.Info("Starting the worker for tunnel ", tun.Id)
 		err = ser.Workers[tun].Start()
 		if err != nil {
 			return err

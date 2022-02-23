@@ -5,12 +5,12 @@ import (
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
-	"io"
 	"net"
 	"strconv"
 )
 
 type Worker struct {
+	ser *Server
 	tun        tunnel.Tunnel
 	conn       net.Conn
 	socket     net.Listener
@@ -18,9 +18,9 @@ type Worker struct {
 	proxyConns *conn.Pool
 }
 
-func newWorker(tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge) *Worker {
+func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge) *Worker {
 	var worker = &Worker{
-		tun, conn, nil, bridge, nil,
+		ser, tun, conn, nil, bridge, nil,
 	}
 	worker.Init()
 	return worker
@@ -30,7 +30,7 @@ func (w *Worker) Init() {
 	w.proxyConns = conn.NewPool(10, func() {
 		err := w.requestProxy()
 		if err != nil {
-			logger.Error("Failed to send request proxy command")
+			w.ser.logger.Error("Failed to send request proxy command")
 		}
 	})
 }
@@ -66,19 +66,11 @@ func (w *Worker) requestProxy() error {
 
 func (w *Worker) handleConn(con net.Conn) {
 	var proxyConn = w.proxyConns.Get()
-	var readErr = func(src io.Reader) {
-		con = src.(net.Conn)
-		if src != proxyConn {
-			w.proxyConns.Put(con)
+	var readErr = func(con net.Conn) {
+		if con != proxyConn {
+			w.proxyConns.Put(proxyConn)
 		}
 		con.Close()
 	}
-	var writeErr = func(dst io.Writer) {
-		con = dst.(net.Conn)
-		if dst != proxyConn {
-			w.proxyConns.Put(con)
-		}
-		con.Close()
-	}
-	conn.Combine(proxyConn, con, readErr, writeErr)
+	conn.Combine(proxyConn, con, readErr)
 }

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/slince/spike/pkg/auth"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
@@ -9,22 +10,16 @@ import (
 	"time"
 )
 
-var logger = log.NewLogger()
-
-func init()  {
-	logger.EnableConsole()
-}
-
 type Client struct {
 	Id string
 	Host string
 	Port int
-	Username string
-	Password string
+	User auth.GenericUser
 	Conn net.Conn
 	Bridge *transfer.Bridge
 	Version string
 	LastActiveAt time.Time
+	logger *log.Logger
 }
 
 func (cli *Client) Start() (err error){
@@ -51,8 +46,8 @@ func (cli *Client) sendCommand(command transfer.Command) error{
 
 func (cli *Client) login() error {
 	return cli.sendCommand(cmd.Login{
-		Username: cli.Username,
-		Password: cli.Password,
+		Username: cli.User.Username,
+		Password: cli.User.Password,
 		Version: cli.Version,
 	})
 }
@@ -63,27 +58,32 @@ func (cli *Client) handleConn() error{
 		if err != nil {
 			return err
 		}
-		logger.Trace("Receive a command:", command)
+		cli.logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ServerPong:
 		case *cmd.LoginRes:
 			if len(command.ClientId) > 0 {
 				cli.Id = command.ClientId
-				logger.Info("The client is connected to the server, client id:", cli.Id)
+				cli.logger.Info("The client is connected to the server, client id:", cli.Id)
 			} else {
-				logger.Error("Failed to logged to the server: ", err)
+				cli.logger.Error("Failed to logged to the server: ", err)
 				return err
 			}
 		}
 	}
 }
 
-func NewClient(host string, port int, username string, password string) *Client{
-	return &Client{
-		Host:     host,
-		Port:     port,
-		Username: username,
-		Password: password,
-		Version:  "0.0.1",
+func NewClient(config Configuration) (*Client, error){
+	var logger, err = log.NewLogger(config.Log)
+	if err != nil {
+		return nil, err
 	}
+	var cli = &Client{
+		Host:     config.Host,
+		Port:     config.Port,
+		User: config.Auth,
+		Version:  "0.0.1",
+		logger: logger,
+	}
+	return cli, err
 }
