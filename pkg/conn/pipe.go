@@ -45,8 +45,9 @@ func Combine(conn1 net.Conn, conn2 net.Conn, readError func(src io.Reader), writ
 	wait.Add(2)
 	go (func() {
 		defer wait.Done()
-		var pipe = NewPipe(conn1, conn2, readError, writeError)
-		pipe.Pipe()
+		//var pipe = NewPipe(conn1, conn2, readError, writeError)
+		//pipe.Pipe()
+		io.Copy(conn2, conn1)
 	})()
 	go (func() {
 		defer wait.Done()
