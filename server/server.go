@@ -89,7 +89,6 @@ func (ser *Server) Start() error {
 }
 
 func (ser *Server) handleConn(conn net.Conn) {
-	defer conn.Close()
 	var bridge = transfer.NewBridge(ft, conn, conn)
 	for {
 		command, err := bridge.Read()
