@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/tunnel"
-	"net"
-	"strconv"
 )
 
 type Handler struct {
@@ -25,8 +23,9 @@ func (h *Handler) registerProxy(command *cmd.RequestProxy) error{
 	if !ok {
 		return fmt.Errorf("cannot find tunnel config for server port: %d", command.ServerPort)
 	}
-
-
+	var worker = newWorker(h.client, tun)
+	go worker.start()
+	return nil
 }
 
 

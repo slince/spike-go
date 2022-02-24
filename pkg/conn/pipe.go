@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func copy(dst io.Writer, src io.Reader) (copied int64, err error, readErr bool) {
+func copy(dst net.Conn, src net.Conn) (copied int64, err error, readErr bool) {
 	var buf = make([]byte, 32 * 1024)
 	for {
 		read, err1 := src.Read(buf)
@@ -32,19 +32,24 @@ func copy(dst io.Writer, src io.Reader) (copied int64, err error, readErr bool) 
 			break
 		}
 	}
+	if readErr {
+		_ = src.Close()
+	} else {
+		_ = dst.Close()
+	}
 	return
 }
 
-func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(con net.Conn)) (fromCopied int64, toCopied int64) {
+func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(alive net.Conn)) (fromCopied int64, toCopied int64) {
 	var wait sync.WaitGroup
 	var pipe = func(conn1 net.Conn, conn2 net.Conn, copied *int64){
 		defer wait.Done()
 		var readErr bool
 		*copied, _, readErr = copy(conn2, conn1)
 		if readErr {
-			errCallback(conn1)
-		} else {
 			errCallback(conn2)
+		} else {
+			errCallback(conn1)
 		}
 	}
 	go pipe(conn1, conn2, &fromCopied)

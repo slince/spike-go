@@ -45,19 +45,24 @@ func NewClient(config Configuration) (*Client, error){
 }
 
 func (cli *Client) Start() (err error){
-	var address = cli.Host + ":" + strconv.Itoa(cli.Port)
-	conn, err := net.Dial("tcp", address)
+	cli.Conn, err = cli.newConn()
 	if err != nil {
 		return
 	}
-	cli.Conn = conn
-	cli.Bridge = transfer.NewBridge(ft, conn, conn)
+	cli.Bridge = transfer.NewBridge(ft, cli.Conn, cli.Conn)
 	err = cli.login()
 	if err != nil {
 		return
 	}
 	err = cli.handleConn()
 	return
+}
+
+func (cli *Client) newConn() (net.Conn, error){
+	var address = cli.Host + ":" + strconv.Itoa(cli.Port)
+	conn, err := net.DialTimeout("tcp", address, 5)
+	cli.logger.Info("Connected to the server")
+	return conn, err
 }
 
 func (cli *Client) sendCommand(command transfer.Command) error{
