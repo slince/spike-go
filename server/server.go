@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"github.com/rs/xid"
 	"github.com/slince/spike/pkg/auth"
@@ -91,20 +92,17 @@ func (ser *Server) Start() error {
 func (ser *Server) handleConn(conn net.Conn) {
 	var bridge = transfer.NewBridge(ft, conn, conn)
 	for {
-		command, err := bridge.Read()
+		var command, err = bridge.Read()
 		if err != nil {
+			if _, ok := err.(*net.OpError); ok {
+				err = errors.New("the client connection is expired")
+			}
 			ser.logger.Warn("Failed to read command: ", err)
 			if client, ok := ser.Clients[conn]; ok {
-				err = ser.closeClient(client)
-				if err != nil {
-					return
-				}
+				ser.closeClient(client)
 			}
 			err = conn.Close()
-			if err != nil {
-				panic(err)
-			}
-			return
+			break
 		}
 		ser.logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
@@ -120,6 +118,10 @@ func (ser *Server) handleConn(conn net.Conn) {
 			if stop { // stop listen the socket.
 				break
 			}
+		}
+		if err != nil {
+			ser.logger.Warn("Handle command error: ", err)
+			_ = conn.Close()
 		}
 	}
 }
@@ -139,9 +141,9 @@ func (ser *Server) handlePing(m *cmd.ClientPing) error {
 }
 
 func (ser *Server) handleLogin(command *cmd.Login, conn net.Conn, bridge *transfer.Bridge) (err error) {
-	defer ser.lock.Unlock()
 	if user := ser.Auth.Check(command); user != nil {
 		client := NewClient(conn, bridge)
+		defer ser.lock.Unlock()
 		ser.lock.Lock()
 		ser.Clients[conn] = client
 		err = ser.sendCommand(client, &cmd.LoginRes{ClientId: client.Id})
@@ -152,11 +154,11 @@ func (ser *Server) handleLogin(command *cmd.Login, conn net.Conn, bridge *transf
 }
 
 func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn, bridge *transfer.Bridge) error {
-	defer ser.lock.Unlock()
 	var client, err = ser.GetClient(command.ClientId)
 	if err != nil {
 		return err
 	}
+	defer ser.lock.Unlock()
 	ser.lock.Lock()
 	for _, tun := range command.Tunnels {
 		ser.Workers[tun] = newWorker(ser, tun, conn, bridge)
@@ -176,34 +178,26 @@ func (ser *Server) handleRegisterProxy(command *cmd.RegisterProxy, conn net.Conn
 		return false, err
 	}
 	if worker, ok := ser.Workers[command.Tunnel]; ok {
-		worker.AddProxyConn(conn)
+		worker.addProxyConn(conn)
 		return true, nil
 	}
 	return false, fmt.Errorf("cannot find worker for the tunnel %s", command.Tunnel.Id)
 }
 
-func (ser *Server) closeClient(client *Client) error {
-	defer ser.lock.Unlock()
+func (ser *Server) closeClient(client *Client) {
 	for _, tun := range client.Tunnels {
-		err := ser.closeTunnel(tun)
-		if err != nil {
-			return err
-		}
+		ser.closeTunnel(tun)
 	}
+	defer ser.lock.Unlock()
 	ser.lock.Lock()
 	delete(ser.Clients, client.Conn)
-	return nil
 }
 
-func (ser *Server) closeTunnel(tun tunnel.Tunnel) error {
+func (ser *Server) closeTunnel(tun tunnel.Tunnel) {
 	defer ser.lock.Unlock()
 	ser.lock.Lock()
 	if worker, ok := ser.Workers[tun]; ok {
-		err := worker.Close()
-		if err != nil {
-			return err
-		}
+		_ = worker.Close()
 		delete(ser.Workers, tun)
 	}
-	return nil
 }

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"github.com/slince/spike/pkg/auth"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/log"
@@ -55,10 +56,6 @@ func (cli *Client) Start() (err error){
 	if err != nil {
 		return
 	}
-	err = cli.handler.registerTunnels()
-	if err != nil {
-		return
-	}
 	err = cli.handleConn()
 	return
 }
@@ -81,6 +78,10 @@ func (cli *Client) handleConn() error{
 	for {
 		command, err := cli.Bridge.Read()
 		if err != nil {
+			if _, ok := err.(*net.OpError); ok {
+				err = errors.New("the connection is expired")
+			}
+			cli.logger.Warn("Failed to read command: ", err)
 			return err
 		}
 		cli.logger.Trace("Receive a command:", command)
@@ -90,8 +91,17 @@ func (cli *Client) handleConn() error{
 			if len(command.ClientId) > 0 {
 				cli.Id = command.ClientId
 				cli.logger.Info("The client is connected to the server, client id:", cli.Id)
+				err = cli.handler.registerTunnels()
+				if err != nil {
+					return err
+				}
 			} else {
 				cli.logger.Error("Failed to logged to the server: ", err)
+				return err
+			}
+		case *cmd.RequestProxy:
+			err = cli.handler.registerProxy(command)
+			if err != nil {
 				return err
 			}
 		}

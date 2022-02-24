@@ -56,12 +56,12 @@ func (w *Worker) Close() error {
 	return w.socket.Close()
 }
 
-func (w *Worker) AddProxyConn(conn net.Conn) {
+func (w *Worker) addProxyConn(conn net.Conn) {
 	w.proxyConns.Put(conn)
 }
 
 func (w *Worker) requestProxy() error {
-	return w.bridge.Write(&cmd.RequestProxy{Tunnel: w.tun})
+	return w.bridge.Write(&cmd.RequestProxy{ServerPort: w.tun.ServerPort})
 }
 
 func (w *Worker) handleConn(con net.Conn) {
@@ -70,7 +70,7 @@ func (w *Worker) handleConn(con net.Conn) {
 		if con != proxyConn {
 			w.proxyConns.Put(proxyConn)
 		}
-		con.Close()
+		_ = con.Close()
 	}
 	conn.Combine(proxyConn, con, readErr)
 }

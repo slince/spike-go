@@ -53,7 +53,7 @@ type RegisterTunnelRes struct {
 
 type RequestProxy struct {
 	transfer.BaseCommand
-	Tunnel tunnel.Tunnel
+	ServerPort uint16
 }
 
 type RegisterProxy struct {
