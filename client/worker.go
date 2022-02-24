@@ -5,6 +5,7 @@ import (
 	"github.com/slince/spike/pkg/tunnel"
 	"net"
 	"strconv"
+	"time"
 )
 
 type Worker struct {
@@ -21,7 +22,7 @@ func newWorker(cli *Client, tun tunnel.Tunnel) *Worker{
 
 func (w *Worker) start() {
 	var address = "127.0.0.1:" + strconv.Itoa(int(w.tun.LocalPort))
-	var localConn, err = net.DialTimeout("tcp", address, 5)
+	var localConn, err = net.DialTimeout("tcp", address, 5 * time.Second)
 	if err != nil {
 		w.cli.logger.Warn("Failed to connect local service: ", err)
 		return

@@ -6,24 +6,19 @@ import (
 	"github.com/slince/spike/pkg/tunnel"
 )
 
-type Handler struct {
-	client *Client
-	config Configuration
-}
-
-func (h *Handler) registerTunnels() error{
-	return h.client.sendCommand(&cmd.RegisterTunnel{
-		ClientId: h.client.Id,
-		Tunnels: h.config.Tunnels,
+func (cli *Client) registerTunnels() error{
+	return cli.sendCommand(&cmd.RegisterTunnel{
+		ClientId: cli.id,
+		Tunnels: cli.tunnels,
 	})
 }
 
-func (h *Handler) registerProxy(command *cmd.RequestProxy) error{
-	var tun, ok = getTunnel(h.config.Tunnels, command.ServerPort)
+func (cli *Client) registerProxy(command *cmd.RequestProxy) error{
+	var tun, ok = getTunnel(cli.tunnels, command.ServerPort)
 	if !ok {
 		return fmt.Errorf("cannot find tunnel config for server port: %d", command.ServerPort)
 	}
-	var worker = newWorker(h.client, tun)
+	var worker = newWorker(cli, tun)
 	go worker.start()
 	return nil
 }

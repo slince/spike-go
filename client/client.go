@@ -2,26 +2,28 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"github.com/slince/spike/pkg/auth"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
+	"github.com/slince/spike/pkg/tunnel"
 	"net"
 	"strconv"
 	"time"
 )
 
 type Client struct {
-	Id string
-	Host string
-	Port int
-	User auth.GenericUser
-	Conn net.Conn
-	Bridge *transfer.Bridge
-	Version string
-	LastActiveAt time.Time
-	logger *log.Logger
-	handler *Handler
+	id   string
+	host string
+	port int
+	user auth.GenericUser
+	conn net.Conn
+	bridge *transfer.Bridge
+	version  string
+	activeAt time.Time
+	logger   *log.Logger
+	tunnels []tunnel.Tunnel
 }
 
 func NewClient(config Configuration) (*Client, error){
@@ -30,85 +32,83 @@ func NewClient(config Configuration) (*Client, error){
 		return nil, err
 	}
 	var cli = &Client{
-		Host:     config.Host,
-		Port:     config.Port,
-		User: config.Auth,
-		Version:  "0.0.1",
-		LastActiveAt: time.Now(),
-		logger: logger,
-	}
-	cli.handler = &Handler{
-		client: cli,
-		config: config,
+		host:     config.Host,
+		port:     config.Port,
+		user:     config.Auth,
+		version:  "0.0.1",
+		activeAt: time.Now(),
+		logger:   logger,
+		tunnels:  config.Tunnels,
 	}
 	return cli, err
 }
 
 func (cli *Client) Start() (err error){
-	cli.Conn, err = cli.newConn()
+	cli.conn, err = cli.newConn()
 	if err != nil {
 		return
 	}
-	cli.Bridge = transfer.NewBridge(ft, cli.Conn, cli.Conn)
+	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
 	err = cli.login()
 	if err != nil {
 		return
 	}
 	err = cli.handleConn()
+	if err != nil {
+		cli.logger.Error("Error: ", err)
+	}
 	return
 }
 
 func (cli *Client) newConn() (net.Conn, error){
-	var address = cli.Host + ":" + strconv.Itoa(cli.Port)
-	conn, err := net.DialTimeout("tcp", address, 5)
+	var address = cli.host + ":" + strconv.Itoa(cli.port)
+	conn, err := net.DialTimeout("tcp", address, 5 * time.Second)
 	cli.logger.Info("Connected to the server")
 	return conn, err
 }
 
 func (cli *Client) sendCommand(command transfer.Command) error{
-	err := cli.Bridge.Write(command)
-	cli.LastActiveAt = time.Now()
+	err := cli.bridge.Write(command)
+	cli.activeAt = time.Now()
 	return err
 }
 
 func (cli *Client) login() error {
 	return cli.sendCommand(&cmd.Login{
-		Username: cli.User.Username,
-		Password: cli.User.Password,
-		Version: cli.Version,
+		Username: cli.user.Username,
+		Password: cli.user.Password,
+		Version: cli.version,
 	})
 }
 
-func (cli *Client) handleConn() error{
+func (cli *Client) handleConn() (err error){
 	for {
-		command, err := cli.Bridge.Read()
+		var command transfer.Command
+		command, err = cli.bridge.Read()
 		if err != nil {
 			if _, ok := err.(*net.OpError); ok {
 				err = errors.New("the connection is expired")
 			}
 			cli.logger.Warn("Failed to read command: ", err)
-			return err
+			return
 		}
 		cli.logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ServerPong:
 		case *cmd.LoginRes:
 			if len(command.ClientId) > 0 {
-				cli.Id = command.ClientId
-				cli.logger.Info("The client is connected to the server, client id:", cli.Id)
-				err = cli.handler.registerTunnels()
-				if err != nil {
-					return err
-				}
+				cli.id = command.ClientId
+				cli.logger.Info("Logged in to the server, client id:", cli.id)
+				err = cli.registerTunnels()
 			} else {
-				cli.logger.Error("Failed to logged to the server: ", err)
-				return err
+				err= fmt.Errorf("failed to log in to the server: %s", command.Error)
 			}
 		case *cmd.RequestProxy:
-			err = cli.handler.registerProxy(command)
-			if err != nil {
-				return err
-			}
+			err = cli.registerProxy(command)
+		}
+		if err!= nil {
+			_ = cli.conn.Close()
+			return
 		}
 	}
 }
