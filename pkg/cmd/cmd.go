@@ -55,8 +55,8 @@ func (r RegisterTunnelRes) AddResult(result TunnelResult){
 }
 
 type TunnelResult struct {
-	Tun tunnel.Tunnel
-	Error string
+	Tunnel tunnel.Tunnel
+	Error  string
 }
 
 type RequestProxy struct {

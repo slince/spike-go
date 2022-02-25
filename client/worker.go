@@ -1,7 +1,9 @@
 package client
 
 import (
+	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
+	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
 	"net"
 	"strconv"
@@ -27,9 +29,11 @@ func (w *Worker) start() {
 		w.cli.logger.Warn("Failed to connect local service: ", err)
 		return
 	}
-	w.cli.logger.Info("Connect to local service successfully: ", address)
+	w.cli.logger.Info("Connected to the local service: ", address)
 	var proxyConn net.Conn
 	proxyConn, err = w.cli.newConn()
+	var bridge = transfer.NewBridge(ft, proxyConn, proxyConn)
+	_ = bridge.Write(&cmd.RegisterProxy{Tunnel: w.tun, ClientId: w.cli.id})
 	conn.Combine(localConn, proxyConn, func(alive net.Conn) {
 		_ = localConn.Close()
 		_ = proxyConn.Close()

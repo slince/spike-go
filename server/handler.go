@@ -38,7 +38,7 @@ func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn,
 	ser.lock.Lock()
 	var result = &cmd.RegisterTunnelRes{}
 	for _, tun := range command.Tunnels {
-		var tunResult = cmd.TunnelResult{Tun: tun}
+		var tunResult = cmd.TunnelResult{Tunnel: tun}
 		if _, exists := ser.Workers[tun.ServerPort];exists {
 			tunResult.Error = fmt.Sprintf("the tunnel for port %d is exists", tun.ServerPort)
 		} else {
