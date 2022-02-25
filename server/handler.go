@@ -35,18 +35,29 @@ func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn,
 	if err != nil {
 		return err
 	}
-	defer ser.lock.Unlock()
 	ser.lock.Lock()
+	var result = &cmd.RegisterTunnelRes{}
 	for _, tun := range command.Tunnels {
-		ser.Workers[tun] = newWorker(ser, tun, conn, bridge)
-		ser.logger.Info("Starting the worker for tunnel ", tun.Id)
-		err = ser.Workers[tun].Start()
-		if err != nil {
-			return err
+		var tunResult = cmd.TunnelResult{Tun: tun}
+		if _, exists := ser.Workers[tun.ServerPort];exists {
+			tunResult.Error = fmt.Sprintf("the tunnel for port %d is exists", tun.ServerPort)
+		} else {
+			ser.Workers[tun.ServerPort] = newWorker(ser, tun, conn, bridge)
+			ser.logger.Info("Starting the worker for tunnel ", tun.ServerPort)
+			err = ser.Workers[tun.ServerPort].Start()
+			if err != nil {
+				tunResult.Error = fmt.Sprint("Failed to start the worker", err.Error())
+			} else {
+				client.Tunnels = append(client.Tunnels, tun)
+			}
 		}
+		if len(tunResult.Error) > 0 {
+			ser.logger.Warn(tunResult.Error)
+		}
+		result.AddResult(tunResult)
 	}
-	client.Tunnels = command.Tunnels
-	return nil
+	ser.lock.Unlock()
+	return ser.sendCommand(client, result)
 }
 
 func (ser *Server) handleRegisterProxy(command *cmd.RegisterProxy, conn net.Conn, bridge *transfer.Bridge) (bool, error) {
@@ -54,9 +65,9 @@ func (ser *Server) handleRegisterProxy(command *cmd.RegisterProxy, conn net.Conn
 	if err != nil {
 		return false, err
 	}
-	if worker, ok := ser.Workers[command.Tunnel]; ok {
+	if worker, ok := ser.Workers[command.Tunnel.ServerPort]; ok {
 		worker.addProxyConn(conn)
 		return true, nil
 	}
-	return false, fmt.Errorf("cannot find worker for the tunnel %s", command.Tunnel.Id)
+	return false, fmt.Errorf("cannot find worker for the tunnel port %d", command.Tunnel.ServerPort)
 }

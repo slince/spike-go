@@ -47,8 +47,16 @@ type RegisterTunnel struct {
 
 type RegisterTunnelRes struct {
 	transfer.BaseCommand
-	Tunnels []tunnel.Tunnel
-	Error   string
+	Results []TunnelResult
+}
+
+func (r RegisterTunnelRes) AddResult(result TunnelResult){
+	r.Results = append(r.Results, result)
+}
+
+type TunnelResult struct {
+	Tun tunnel.Tunnel
+	Error string
 }
 
 type RequestProxy struct {

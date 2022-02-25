@@ -95,6 +95,7 @@ func (cli *Client) handleConn() (err error){
 		cli.logger.Trace("Receive a command:", command)
 		switch command := command.(type) {
 		case *cmd.ServerPong:
+			cli.activeAt = time.Now()
 		case *cmd.LoginRes:
 			if len(command.ClientId) > 0 {
 				cli.id = command.ClientId
@@ -103,6 +104,8 @@ func (cli *Client) handleConn() (err error){
 			} else {
 				err= fmt.Errorf("failed to log in to the server: %s", command.Error)
 			}
+		case *cmd.RegisterTunnelRes:
+			err = cli.handleRegisterTunnelRes(command)
 		case *cmd.RequestProxy:
 			err = cli.registerProxy(command)
 		}

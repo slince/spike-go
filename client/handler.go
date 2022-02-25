@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/tunnel"
@@ -11,6 +12,21 @@ func (cli *Client) registerTunnels() error{
 		ClientId: cli.id,
 		Tunnels: cli.tunnels,
 	})
+}
+
+
+func (cli *Client) handleRegisterTunnelRes(command *cmd.RegisterTunnelRes) error{
+	var errNum = 0
+	for _, result := range command.Results {
+		if len(result.Error) > 0 {
+			cli.logger.Warn(result.Error)
+			errNum ++
+		}
+	}
+	if errNum == len(command.Results) {
+		return errors.New("all tunnels register failed")
+	}
+	return nil
 }
 
 func (cli *Client) registerProxy(command *cmd.RequestProxy) error{

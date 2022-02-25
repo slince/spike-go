@@ -28,6 +28,7 @@ func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.B
 
 func (w *Worker) Init() {
 	w.proxyConns = conn.NewPool(10, func() {
+		w.ser.logger.Info("Request to client for proxy connection")
 		err := w.requestProxy()
 		if err != nil {
 			w.ser.logger.Error("Failed to send request proxy command")
@@ -65,6 +66,7 @@ func (w *Worker) requestProxy() error {
 }
 
 func (w *Worker) handleConn(con net.Conn) {
+	w.ser.logger.Trace("Accept a public connection:", con.RemoteAddr().String())
 	var proxyConn = w.proxyConns.Get()
 	var readErr = func(con net.Conn) {
 		if con != proxyConn {

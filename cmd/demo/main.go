@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Anima interface {
 	Say()
@@ -18,9 +21,23 @@ func isAnima(a Anima){
 	fmt.Println(a)
 }
 
+var lock  sync.Mutex
+
+func hello(){
+	defer lock.Unlock()
+	lock.Lock()
+   	word()
+}
+
+func word(){
+	defer lock.Unlock()
+	lock.Lock()
+	fmt.Println("hello world")
+}
+
 func main(){
-	var dog = Dog{}
-	isAnima(&dog)
+
+	hello()
 
 
 	//var reader io.Reader = bytes.NewReader([]byte("hello world i love china"))

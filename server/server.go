@@ -40,7 +40,7 @@ type Server struct {
 	Port    int
 	Clients map[net.Conn]*Client
 	Auth    auth.Auth
-	Workers map[tunnel.Tunnel]*Worker
+	Workers map[uint16]*Worker
 	lock    sync.Mutex
 	logger *log.Logger
 }
@@ -56,7 +56,7 @@ func NewServer(cfg Configuration) (*Server, error) {
 		Port:    cfg.Port,
 		Clients: make(map[net.Conn]*Client, 0),
 		Auth:    au,
-		Workers: make(map[tunnel.Tunnel]*Worker, 0),
+		Workers: make(map[uint16]*Worker, 0),
 		logger: logger,
 	}
 	return ser, nil
@@ -132,19 +132,17 @@ func (ser *Server) sendCommand(client *Client, command transfer.Command) error {
 }
 
 func (ser *Server) closeClient(client *Client) {
+	defer ser.lock.Unlock()
+	ser.lock.Lock()
 	for _, tun := range client.Tunnels {
 		ser.closeTunnel(tun)
 	}
-	defer ser.lock.Unlock()
-	ser.lock.Lock()
 	delete(ser.Clients, client.Conn)
 }
 
 func (ser *Server) closeTunnel(tun tunnel.Tunnel) {
-	defer ser.lock.Unlock()
-	ser.lock.Lock()
-	if worker, ok := ser.Workers[tun]; ok {
+	if worker, ok := ser.Workers[tun.ServerPort]; ok {
 		_ = worker.Close()
-		delete(ser.Workers, tun)
+		delete(ser.Workers, tun.ServerPort)
 	}
 }

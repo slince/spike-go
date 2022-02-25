@@ -27,7 +27,7 @@ func (w *Worker) start() {
 		w.cli.logger.Warn("Failed to connect local service: ", err)
 		return
 	}
-	w.cli.logger.Info("Connect to local service successfully ", address)
+	w.cli.logger.Info("Connect to local service successfully: ", address)
 	var proxyConn net.Conn
 	proxyConn, err = w.cli.newConn()
 	conn.Combine(localConn, proxyConn, func(alive net.Conn) {
