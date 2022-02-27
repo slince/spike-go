@@ -48,22 +48,30 @@ func (w *Worker) start() {
 	if err != nil {
 		return
 	}
-	localConn, err := w.newLocalConn()
-	if err != nil {
-		return
-	}
 
 	var bridge = transfer.NewBridge(ft, proxyConn, proxyConn)
 	_ = bridge.Write(&cmd.RegisterProxy{Tunnel: w.tun, ClientId: w.cli.id})
 
-	conn.Combine(localConn, proxyConn, func(alive net.Conn, err error) {
-		if alive == proxyConn {
-			w.cli.logger.Warn("The local connection is disconnected:", err)
-			_ = localConn.Close()
-		} else {
-			w.cli.logger.Warn("The proxy connection is disconnected:", err)
-			_ = proxyConn.Close()
+	for {
+		localConn, err := w.newLocalConn()
+		if err != nil {
+			return
 		}
-	})
+		var end bool
+		conn.Combine(localConn, proxyConn, func(alive net.Conn, err error) {
+			if alive == proxyConn {
+				w.cli.logger.Warn("The local connection is disconnected:", err)
+				_ = localConn.Close()
+			} else {
+				w.cli.logger.Warn("The proxy connection is disconnected:", err)
+				_ = proxyConn.Close()
+				end = true
+			}
+		})
+		if end {
+			break
+		}
+	}
+
 	w.cli.logger.Info("The worker is closed")
 }

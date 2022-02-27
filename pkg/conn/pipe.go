@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -40,22 +41,23 @@ func copy(dst net.Conn, src net.Conn) (copied int64, err error, readErr bool) {
 	return
 }
 
-func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(alive net.Conn, err error)) (fromCopied int64, toCopied int64) {
+func Combine(conn1 net.Conn, conn2 net.Conn, errCall func(alive net.Conn, err error)) (fromCopied int64, toCopied int64) {
 	var wait sync.WaitGroup
 	var pipe = func(conn1 net.Conn, conn2 net.Conn, copied *int64){
 		defer wait.Done()
 		var readErr bool
 		var err error
 		*copied, err, readErr = copy(conn2, conn1)
+		fmt.Println("err combine:", readErr, err)
 		if readErr {
-			errCallback(conn2, err)
+			errCall(conn2, err)
 		} else {
-			errCallback(conn1, err)
+			errCall(conn1, err)
 		}
 	}
+	wait.Add(2)
 	go pipe(conn1, conn2, &fromCopied)
 	go pipe(conn2, conn1, &toCopied)
-	wait.Add(2)
 	wait.Wait()
 	return
 }
