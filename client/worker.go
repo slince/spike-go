@@ -13,29 +13,57 @@ import (
 type Worker struct {
 	cli *Client
 	tun tunnel.Tunnel
+	localAddress string
 }
 
+var defaultHost = "127.0.0.1"
+
 func newWorker(cli *Client, tun tunnel.Tunnel) *Worker{
+	var localHost = defaultHost
+	if len(tun.LocalHost) > 0 {
+		localHost = tun.LocalHost
+	}
 	return &Worker{
 		cli: cli,
 		tun: tun,
+		localAddress:  localHost + ":" + strconv.Itoa(int(tun.LocalPort)),
 	}
 }
 
-func (w *Worker) start() {
-	var address = "127.0.0.1:" + strconv.Itoa(int(w.tun.LocalPort))
-	var localConn, err = net.DialTimeout("tcp", address, 5 * time.Second)
+func (w *Worker) newLocalConn() (net.Conn, error){
+	var con, err = net.DialTimeout("tcp", w.localAddress, 5 * time.Second)
 	if err != nil {
-		w.cli.logger.Warn("Failed to connect local service: ", err)
+		w.cli.logger.Error("Failed to connect local service: ", err)
+	} else {
+		w.cli.logger.Info("Connected to the local service: ", w.localAddress)
+	}
+	return con,err
+}
+
+func (w *Worker) start() {
+	var proxyConn net.Conn
+	var err error
+
+	proxyConn, err = w.cli.newConn()
+	if err != nil {
 		return
 	}
-	w.cli.logger.Info("Connected to the local service: ", address)
-	var proxyConn net.Conn
-	proxyConn, err = w.cli.newConn()
+	localConn, err := w.newLocalConn()
+	if err != nil {
+		return
+	}
+
 	var bridge = transfer.NewBridge(ft, proxyConn, proxyConn)
 	_ = bridge.Write(&cmd.RegisterProxy{Tunnel: w.tun, ClientId: w.cli.id})
-	conn.Combine(localConn, proxyConn, func(alive net.Conn) {
-		_ = localConn.Close()
-		_ = proxyConn.Close()
+
+	conn.Combine(localConn, proxyConn, func(alive net.Conn, err error) {
+		if alive == proxyConn {
+			w.cli.logger.Warn("The local connection is disconnected:", err)
+			_ = localConn.Close()
+		} else {
+			w.cli.logger.Warn("The proxy connection is disconnected:", err)
+			_ = proxyConn.Close()
+		}
 	})
+	w.cli.logger.Info("The worker is closed")
 }

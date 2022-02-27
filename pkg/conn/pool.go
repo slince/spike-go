@@ -12,10 +12,10 @@ type Pool struct {
 	timeout  int
 	lock     sync.Mutex
 	cond     *sync.Cond
-	callback func()
+	callback func(pool *Pool)
 }
 
-func NewPool(max int, callback func()) *Pool {
+func NewPool(max int, callback func(pool *Pool)) *Pool {
 	return &Pool{
 		conns:    list.New(),
 		max:      max,
@@ -26,15 +26,18 @@ func NewPool(max int, callback func()) *Pool {
 }
 
 func (p *Pool) Get() (conn net.Conn) {
-	defer p.lock.Unlock()
 	p.lock.Lock()
-	var wait = false
+	var wait bool
 	if p.conns.Len() == 0 {
-		wait = true
 		p.lock.Unlock()
+		wait = true
 		p.cond.L.Lock()
-		p.callback()
+		p.callback(p)
 		p.cond.Wait()
+	}
+	defer p.lock.Unlock()
+	if wait {
+		p.lock.Lock()
 	}
 	var ele = p.conns.Front()
 	p.conns.Remove(ele)
@@ -46,8 +49,8 @@ func (p *Pool) Get() (conn net.Conn) {
 }
 
 func (p *Pool) Put(conn net.Conn) {
-	var wait = p.conns.Len() == 0
 	p.lock.Lock()
+	var wait = p.conns.Len() == 0
 	p.conns.PushBack(conn)
 	p.lock.Unlock()
 	if wait {

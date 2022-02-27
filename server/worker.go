@@ -27,7 +27,7 @@ func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.B
 }
 
 func (w *Worker) Init() {
-	w.proxyConns = conn.NewPool(10, func() {
+	w.proxyConns = conn.NewPool(10, func(pool *conn.Pool) {
 		w.ser.logger.Info("Request to client for proxy connection")
 		err := w.requestProxy()
 		if err != nil {
@@ -43,6 +43,13 @@ func (w *Worker) Start() (err error) {
 		return
 	}
 	w.socket = socket
+
+	// first request proxy
+	//err = w.requestProxy()
+	//if err != nil {
+	//	w.ser.logger.Error("Failed to send request proxy command")
+	//}
+
 	for {
 		var con, err1 = socket.Accept()
 		if err1 != nil {
@@ -68,11 +75,14 @@ func (w *Worker) requestProxy() error {
 func (w *Worker) handleConn(con net.Conn) {
 	w.ser.logger.Trace("Accept a public connection:", con.RemoteAddr().String())
 	var proxyConn = w.proxyConns.Get()
-	var readErr = func(con net.Conn) {
-		if con != proxyConn {
+	var errCall = func(alive net.Conn, err error) {
+		if alive == proxyConn {
+			w.ser.logger.Warn("The public connection is disconnected:", err)
 			w.proxyConns.Put(proxyConn)
+		} else {
+			w.ser.logger.Warn("The proxy connection is disconnected:", err)
 		}
-		_ = con.Close()
+		//_ = con.Close()
 	}
-	conn.Combine(proxyConn, con, readErr)
+	conn.Combine(proxyConn, con, errCall)
 }

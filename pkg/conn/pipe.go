@@ -40,16 +40,17 @@ func copy(dst net.Conn, src net.Conn) (copied int64, err error, readErr bool) {
 	return
 }
 
-func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(alive net.Conn)) (fromCopied int64, toCopied int64) {
+func Combine(conn1 net.Conn, conn2 net.Conn, errCallback func(alive net.Conn, err error)) (fromCopied int64, toCopied int64) {
 	var wait sync.WaitGroup
 	var pipe = func(conn1 net.Conn, conn2 net.Conn, copied *int64){
 		defer wait.Done()
 		var readErr bool
-		*copied, _, readErr = copy(conn2, conn1)
+		var err error
+		*copied, err, readErr = copy(conn2, conn1)
 		if readErr {
-			errCallback(conn2)
+			errCallback(conn2, err)
 		} else {
-			errCallback(conn1)
+			errCallback(conn1, err)
 		}
 	}
 	go pipe(conn1, conn2, &fromCopied)

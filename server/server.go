@@ -91,39 +91,42 @@ func (ser *Server) Start() error {
 
 func (ser *Server) handleConn(conn net.Conn) {
 	var bridge = transfer.NewBridge(ft, conn, conn)
-	for {
-		var command, err = bridge.Read()
-		if err != nil {
-			if _, ok := err.(*net.OpError); ok {
-				err = errors.New("the client connection is expired")
-			}
-			ser.logger.Warn("Failed to read command: ", err)
-			if client, ok := ser.Clients[conn]; ok {
-				ser.closeClient(client)
-			}
-			err = conn.Close()
-			break
-		}
-		ser.logger.Trace("Receive a command:", command)
-		switch command := command.(type) {
-		case *cmd.ClientPing:
-			err = ser.handlePing(command)
-		case *cmd.Login:
-			err = ser.handleLogin(command, conn, bridge)
-		case *cmd.RegisterTunnel:
-			err = ser.handleRegisterTun(command, conn, bridge)
-		case *cmd.RegisterProxy:
-			var stop = false
-			stop, err = ser.handleRegisterProxy(command, conn, bridge)
-			if stop { // stop listen the socket.
+
+	ParseCommand:
+		for {
+			var command, err = bridge.Read()
+			if err != nil {
+				if _, ok := err.(*net.OpError); ok {
+					err = errors.New("the client connection is expired")
+				}
+				ser.logger.Warn("Failed to read command: ", err)
+				if client, ok := ser.Clients[conn]; ok {
+					ser.closeClient(client)
+				}
+				err = conn.Close()
 				break
 			}
+			ser.logger.Trace("Receive a command:", command)
+			switch command := command.(type) {
+			case *cmd.ClientPing:
+				err = ser.handlePing(command)
+			case *cmd.Login:
+				err = ser.handleLogin(command, conn, bridge)
+			case *cmd.RegisterTunnel:
+				err = ser.handleRegisterTun(command, conn, bridge)
+			case *cmd.RegisterProxy:
+				var stop = false
+				stop, err = ser.handleRegisterProxy(command, conn, bridge)
+				ser.logger.Print("handle register ", stop, err)
+				if stop { // stop listen the socket.
+					break ParseCommand
+				}
+			}
+			if err != nil {
+				ser.logger.Warn("Handle command error: ", err)
+				_ = conn.Close()
+			}
 		}
-		if err != nil {
-			ser.logger.Warn("Handle command error: ", err)
-			_ = conn.Close()
-		}
-	}
 }
 
 func (ser *Server) sendCommand(client *Client, command transfer.Command) error {

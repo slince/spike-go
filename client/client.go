@@ -63,7 +63,11 @@ func (cli *Client) Start() (err error){
 func (cli *Client) newConn() (net.Conn, error){
 	var address = cli.host + ":" + strconv.Itoa(cli.port)
 	conn, err := net.DialTimeout("tcp", address, 5 * time.Second)
-	cli.logger.Info("Connected to the server")
+	if err == nil {
+		cli.logger.Info("Connected to the server")
+	} else {
+		cli.logger.Error("Failed to connect the server: ", err)
+	}
 	return conn, err
 }
 
