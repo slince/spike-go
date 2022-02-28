@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/transfer"
@@ -59,6 +60,7 @@ func (w *Worker) start() {
 		}
 		var end bool
 		conn.Combine(localConn, proxyConn, func(alive net.Conn, err error) {
+			fmt.Println(alive, localConn, proxyConn)
 			if alive == proxyConn {
 				w.cli.logger.Warn("The local connection is disconnected:", err)
 				_ = localConn.Close()
@@ -68,6 +70,7 @@ func (w *Worker) start() {
 				end = true
 			}
 		})
+		time.Sleep(time.Duration(2)*time.Hour)
 		if end {
 			break
 		}
