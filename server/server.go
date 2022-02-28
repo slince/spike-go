@@ -9,6 +9,7 @@ import (
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
+	"io"
 	"net"
 	"strconv"
 	"sync"
@@ -99,6 +100,9 @@ func (ser *Server) handleConn(conn net.Conn) {
 				if _, ok := err.(*net.OpError); ok {
 					err = errors.New("the client connection is expired")
 				}
+				if err == io.EOF {
+					err = errors.New("the client is closed")
+				}
 				ser.logger.Warn("Failed to read command: ", err)
 				if client, ok := ser.Clients[conn]; ok {
 					ser.closeClient(client)
@@ -141,6 +145,7 @@ func (ser *Server) closeClient(client *Client) {
 		ser.closeTunnel(tun)
 	}
 	delete(ser.Clients, client.Conn)
+	ser.logger.Info("The tunnel workers for the client are closed:", client.Id)
 }
 
 func (ser *Server) closeTunnel(tun tunnel.Tunnel) {

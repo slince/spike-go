@@ -50,7 +50,7 @@ type RegisterTunnelRes struct {
 	Results []TunnelResult
 }
 
-func (r RegisterTunnelRes) AddResult(result TunnelResult){
+func (r *RegisterTunnelRes) AddResult(result TunnelResult){
 	r.Results = append(r.Results, result)
 }
 

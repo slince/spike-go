@@ -24,6 +24,7 @@ type BaseCommand struct {
 func (c *BaseCommand) String() string{
 	return string(c.rawBody)
 }
+
 func (c *BaseCommand) setRawBody(body []byte){
 	c.rawBody = body
 }

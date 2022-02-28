@@ -44,20 +44,22 @@ func (w *Worker) Start() (err error) {
 	}
 	w.socket = socket
 
-	// first request proxy
-	//err = w.requestProxy()
-	//if err != nil {
-	//	w.ser.logger.Error("Failed to send request proxy command")
-	//}
-
-	for {
-		var con, err1 = socket.Accept()
-		if err1 != nil {
-			err = err1
-			return
-		}
-		go w.handleConn(con)
+	//first request proxy
+	err = w.requestProxy()
+	if err != nil {
+		w.ser.logger.Error("Failed to send request proxy command")
 	}
+	go func() {
+		for {
+			var con, err1 = socket.Accept()
+			if err1 != nil {
+				err = err1
+				return
+			}
+			go w.handleConn(con)
+		}
+	}()
+	return
 }
 
 func (w *Worker) Close() error {
