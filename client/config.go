@@ -11,8 +11,8 @@ import (
 type Configuration struct {
 	Host string `json:"host"`
 	Port int
-	Log log.Config
-	Auth auth.GenericUser
+	Log     log.Config
+	User    auth.GenericUser
 	Tunnels []tunnel.Tunnel
 }
 

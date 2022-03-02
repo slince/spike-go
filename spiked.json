@@ -8,6 +8,6 @@
   "log": {
     "console": true,
     "level": "trace",
-    "file": "./spike.log"
+    "file": "./spiked.log"
   }
 }

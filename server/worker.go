@@ -45,10 +45,10 @@ func (w *Worker) Start() (err error) {
 	w.socket = socket
 
 	//first request proxy
-	err = w.requestProxy()
-	if err != nil {
-		w.ser.logger.Error("Failed to send request proxy command")
-	}
+	//err = w.requestProxy()
+	//if err != nil {
+	//	w.ser.logger.Error("Failed to send request proxy command")
+	//}
 	go func() {
 		for {
 			var con, err1 = socket.Accept()
@@ -77,14 +77,5 @@ func (w *Worker) requestProxy() error {
 func (w *Worker) handleConn(con net.Conn) {
 	w.ser.logger.Trace("Accept a public connection:", con.RemoteAddr().String())
 	var proxyConn = w.proxyConns.Get()
-	var errCall = func(alive net.Conn, err error) {
-		if alive == proxyConn {
-			w.ser.logger.Warn("The public connection is disconnected:", err)
-			w.proxyConns.Put(proxyConn)
-		} else {
-			w.ser.logger.Warn("The proxy connection is disconnected:", err)
-		}
-		//_ = con.Close()
-	}
-	conn.Combine(proxyConn, con, errCall)
+	conn.Combine(proxyConn, con)
 }

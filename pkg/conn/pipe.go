@@ -73,26 +73,20 @@ func copy(dst net.Conn, src net.Conn, stop chan bool) (copied int64, err error, 
 	return
 }
 
-func Combine(conn1 net.Conn, conn2 net.Conn, errCall func(alive net.Conn, err error)) (fromCopied int64, toCopied int64) {
+func Combine(conn1 net.Conn, conn2 net.Conn) (fromCopied int64, toCopied int64) {
 	var wait sync.WaitGroup
-	var stop = make(chan bool, 1)
 	var pipe = func(conn1 net.Conn, conn2 net.Conn, copied *int64){
 		defer wait.Done()
-		var readErr bool
+		defer conn1.Close()
+		defer conn2.Close()
 		var err error
-		*copied, err, readErr = copy(conn2, conn1, stop)
-		fmt.Println("err combine:", readErr, err)
-		stop <- true
-		if readErr {
-			errCall(conn2, err)
-		} else {
-			errCall(conn1, err)
-		}
+		*copied, err = io.Copy(conn2, conn1)
+		//panic(err)
+		fmt.Println("err combine:", err, *copied)
 	}
 	wait.Add(2)
 	go pipe(conn1, conn2, &fromCopied)
 	go pipe(conn2, conn1, &toCopied)
 	wait.Wait()
-	close(stop)
 	return
 }

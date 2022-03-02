@@ -34,7 +34,7 @@ func NewClient(config Configuration) (*Client, error){
 	var cli = &Client{
 		host:     config.Host,
 		port:     config.Port,
-		user:     config.Auth,
+		user:     config.User,
 		version:  "0.0.1",
 		activeAt: time.Now(),
 		logger:   logger,

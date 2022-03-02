@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/transfer"
@@ -53,28 +52,11 @@ func (w *Worker) start() {
 	var bridge = transfer.NewBridge(ft, proxyConn, proxyConn)
 	_ = bridge.Write(&cmd.RegisterProxy{Tunnel: w.tun, ClientId: w.cli.id})
 
-	for {
-		localConn, err := w.newLocalConn()
-		if err != nil {
-			return
-		}
-		var end bool
-		conn.Combine(localConn, proxyConn, func(alive net.Conn, err error) {
-			fmt.Println(alive, localConn, proxyConn)
-			if alive == proxyConn {
-				w.cli.logger.Warn("The local connection is disconnected:", err)
-				_ = localConn.Close()
-			} else {
-				w.cli.logger.Warn("The proxy connection is disconnected:", err)
-				_ = proxyConn.Close()
-				end = true
-			}
-		})
-		time.Sleep(time.Duration(2)*time.Hour)
-		if end {
-			break
-		}
+	localConn, err := w.newLocalConn()
+	if err != nil {
+		return
 	}
+	conn.Combine(localConn, localConn)
 
 	w.cli.logger.Info("The worker is closed")
 }
