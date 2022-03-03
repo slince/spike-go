@@ -56,7 +56,7 @@ func (w *Worker) start() {
 	if err != nil {
 		return
 	}
-	conn.Combine(localConn, localConn)
+	conn.Combine(localConn, proxyConn)
 
 	w.cli.logger.Info("The worker is closed")
 }

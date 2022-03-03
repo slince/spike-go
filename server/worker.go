@@ -74,8 +74,8 @@ func (w *Worker) requestProxy() error {
 	return w.bridge.Write(&cmd.RequestProxy{ServerPort: w.tun.ServerPort})
 }
 
-func (w *Worker) handleConn(con net.Conn) {
-	w.ser.logger.Trace("Accept a public connection:", con.RemoteAddr().String())
+func (w *Worker) handleConn(pubConn net.Conn) {
+	w.ser.logger.Trace("Accept a public connection:", pubConn.RemoteAddr().String())
 	var proxyConn = w.proxyConns.Get()
-	conn.Combine(proxyConn, con)
+	conn.Combine(proxyConn, pubConn)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"sync"
 )
 
@@ -37,9 +38,26 @@ func word(){
 
 func main(){
 
-	hello()
+	//hello()
 
 
+	var listen, err = net.Dial("tcp", "127.0.0.1:3306")
+
+	if err != nil {
+		panic(err)
+	}
+
+	for  {
+		var buf = make([]byte, 16 * 1024)
+
+		read, err := listen.Read(buf)
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(read, string(buf), "end")
+	}
 	//var reader io.Reader = bytes.NewReader([]byte("hello world i love china"))
 	//var wantBytes = make([]byte, 4)
 	//var reader io.Reader = bytes.NewReader([]byte("hello world i love china"))
