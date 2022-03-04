@@ -1,20 +1,7 @@
 package main
 
-import (
-	"github.com/slince/spike/client"
-)
+import "github.com/slince/spike/cmd/spike/cmd"
 
 func main(){
-	var config, err = client.ConfigFromJsonFile("./spike.json")
-	if err != nil {
-		panic(err)
-	}
-	cli, err := client.NewClient(config)
-	if err != nil {
-		panic(err)
-	}
-	err = cli.Start()
-	if err != nil {
-		panic(err)
-	}
+	cmd.Execute()
 }

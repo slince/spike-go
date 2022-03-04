@@ -1,14 +1,14 @@
 package server
 
 import (
-	"encoding/json"
 	"github.com/slince/spike/pkg/auth"
 	"github.com/slince/spike/pkg/log"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
 
 type Configuration struct {
-	Host string `json:"host"`
+	Host string
 	Port int
 	Log log.Config
 	Users []auth.GenericUser
@@ -20,6 +20,6 @@ func ConfigFromJsonFile(file string) (config Configuration, err error){
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(read, &config)
+	err = yaml.Unmarshal(read, &config)
 	return
 }
