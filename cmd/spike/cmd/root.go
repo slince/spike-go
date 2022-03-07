@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/slince/spike/client"
+	"github.com/slince/spike/pkg/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -49,7 +50,9 @@ func createConfig() (client.Configuration, error){
 	var _, err = os.Stat(cfgFile)
 	var config client.Configuration
 	if err != nil {
-	    config = client.Configuration{}
+	    config = client.Configuration{
+			Log: log.DefaultConfig,
+		}
 	} else {
 		config, err = client.ConfigFromJsonFile(cfgFile)
 	}

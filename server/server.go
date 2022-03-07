@@ -79,6 +79,7 @@ func (ser *Server) Start() error {
 		return err
 	}
 	ser.logger.Info("The server is running on " + address)
+	go ser.checkAlive()
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
@@ -87,6 +88,21 @@ func (ser *Server) Start() error {
 		}
 		ser.logger.Info("Accept a connection from : ", conn.RemoteAddr())
 		go ser.handleConn(conn)
+	}
+}
+
+func (ser *Server) checkAlive(){
+	var timer = time.NewTicker(10 * time.Second)
+	defer timer.Stop()
+	for {
+		<- timer.C
+		ser.logger.Trace("Check all clients are alive:", len(ser.Clients))
+		var aliveTime = time.Now().Add(-20 * time.Second)
+		for _, client := range ser.Clients {
+			if client.ActiveAt.Before(aliveTime) {
+				ser.closeClient(client)
+			}
+		}
 	}
 }
 
@@ -150,7 +166,7 @@ func (ser *Server) closeClient(client *Client) {
 
 func (ser *Server) closeTunnel(tun tunnel.Tunnel) {
 	if worker, ok := ser.Workers[tun.ServerPort]; ok {
-		_ = worker.Close()
+		worker.Close()
 		delete(ser.Workers, tun.ServerPort)
 	}
 }

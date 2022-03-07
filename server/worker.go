@@ -16,11 +16,12 @@ type Worker struct {
 	socket     net.Listener
 	bridge     *transfer.Bridge
 	proxyConns *conn.Pool
+	stop chan bool
 }
 
 func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge) *Worker {
 	var worker = &Worker{
-		ser, tun, conn, nil, bridge, nil,
+		ser, tun, conn, nil, bridge, nil, make(chan bool, 1),
 	}
 	worker.Init()
 	return worker
@@ -50,20 +51,26 @@ func (w *Worker) Start() (err error) {
 	//	w.ser.logger.Error("Failed to send request proxy command")
 	//}
 	go func() {
+		defer close(w.stop)
 		for {
-			var con, err1 = socket.Accept()
-			if err1 != nil {
-				err = err1
+			select {
+			case <- w.stop:
 				return
+			default:
+				var con, err1 = socket.Accept()
+				if err1 != nil {
+					err = err1
+					return
+				}
+				go w.handleConn(con)
 			}
-			go w.handleConn(con)
 		}
 	}()
 	return
 }
 
-func (w *Worker) Close() error {
-	return w.socket.Close()
+func (w *Worker) Close() {
+	w.stop <- true
 }
 
 func (w *Worker) addProxyConn(conn net.Conn) {

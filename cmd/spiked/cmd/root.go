@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/slince/spike/pkg/auth"
+	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/server"
 	"github.com/spf13/cobra"
 	"os"
@@ -35,22 +36,22 @@ func init(){
 }
 
 func start() error{
-	var config, err = createConfig()
-	if err != nil {
-		return err
-	}
+	var config = createConfig()
 	ser, err := server.NewServer(config)
-	if ser != nil {
+	if err != nil {
 		return err
 	}
 	return ser.Start()
 }
 
-func createConfig() (server.Configuration, error){
+func createConfig() server.Configuration {
 	var _, err = os.Stat(cfgFile)
 	var config server.Configuration
 	if err != nil {
-	    config = server.Configuration{Users: make([]auth.GenericUser, 0)}
+	    config = server.Configuration{
+			Users: make([]auth.GenericUser, 0),
+			Log: log.DefaultConfig,
+		}
 	} else {
 		config, err = server.ConfigFromJsonFile(cfgFile)
 	}
@@ -65,7 +66,7 @@ func createConfig() (server.Configuration, error){
 			Username: username, Password: password,
 		})
 	}
-	return config, err
+	return config
 }
 
 func Execute() {

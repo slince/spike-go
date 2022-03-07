@@ -15,6 +15,12 @@ type Config struct {
 	Level string
 }
 
+var DefaultConfig = Config{
+	Console: true,
+	File: "",
+	Level: "trace",
+}
+
 func NewLogger(config Config) (logger *Logger, err error){
 	var level logrus.Level
 	level, err = logrus.ParseLevel(config.Level)

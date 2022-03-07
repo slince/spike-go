@@ -60,6 +60,16 @@ func (cli *Client) Start() (err error){
 	return
 }
 
+func (cli *Client) autoPing(){
+	var timer = time.NewTicker(10 * time.Second)
+	for {
+		<- timer.C
+		_ = cli.sendCommand(&cmd.ClientPing{
+			ClientId: cli.id,
+		})
+	}
+}
+
 func (cli *Client) newConn() (net.Conn, error){
 	var address = cli.host + ":" + strconv.Itoa(cli.port)
 	conn, err := net.DialTimeout("tcp", address, 5 * time.Second)
@@ -104,6 +114,7 @@ func (cli *Client) handleConn() (err error){
 			if len(command.ClientId) > 0 {
 				cli.id = command.ClientId
 				cli.logger.Info("Logged in to the server, client id:", cli.id)
+				go cli.autoPing() // heartbeat
 				err = cli.registerTunnels()
 			} else {
 				err= fmt.Errorf("failed to log in to the server: %s", command.Error)
