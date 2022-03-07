@@ -130,3 +130,7 @@ func (cli *Client) handleConn() (err error){
 		}
 	}
 }
+
+func (cli *Client) getProxies(){
+
+}
