@@ -30,13 +30,14 @@ func showProxy() error{
 	}
 	table := tablewriter.NewWriter(terminal.Stdout)
 	table.SetAutoFormatHeaders(false)
-	table.SetHeader([]string{terminal.Format("<header>Protocol</>"), terminal.Format("<header>Server Port</>"), terminal.Format("<header>Client Id</>")})
+	table.SetHeader([]string{terminal.Format("<header>Protocol</>"), terminal.Format("<header>Server Port</>"), terminal.Format("<header>Client Id</>"), terminal.Format("<header>Remote Address</>")})
 
 	for _, proxy := range proxies {
 		table.Append([]string{
-			proxy.Protocol,
-			strconv.Itoa(proxy.ServerPort),
-			"client id",
+			proxy.Tunnel.Protocol,
+			strconv.Itoa(proxy.Tunnel.ServerPort),
+			proxy.ClientId,
+			proxy.RemoteAddress,
 		})
 	}
 	table.Render()

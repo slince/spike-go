@@ -137,10 +137,11 @@ func (ser *Server) handleConn(conn net.Conn) {
 			case *cmd.RegisterProxy:
 				var stop = false
 				stop, err = ser.handleRegisterProxy(command, conn, bridge)
-				ser.logger.Print("handle register ", stop, err)
 				if stop { // stop listen the socket.
 					break ParseCommand
 				}
+			case *cmd.ViewProxy:
+				err = ser.handleViewProxy(command, bridge)
 			}
 			if err != nil {
 				ser.logger.Warn("Handle command error: ", err)

@@ -27,7 +27,7 @@ type Client struct {
 	activeAt time.Time
 	logger   *log.Logger
 	tunnels []tunnel.Tunnel
-	proxiesChan chan []tunnel.Tunnel
+	proxiesChan chan []cmd.ProxyItem
 }
 
 func NewClient(config Configuration) (*Client, error){
@@ -43,7 +43,7 @@ func NewClient(config Configuration) (*Client, error){
 		activeAt: time.Now(),
 		logger:   logger,
 		tunnels:  config.Tunnels,
-		proxiesChan: make(chan []tunnel.Tunnel, 2),
+		proxiesChan: make(chan []cmd.ProxyItem, 2),
 	}
 	return cli, err
 }
@@ -200,7 +200,7 @@ func attemptGetPrevSessionId() (string, error){
 	return string(read), err
 }
 
-func (cli *Client) GetProxies() ([]tunnel.Tunnel, error){
+func (cli *Client) GetProxies() ([]cmd.ProxyItem, error){
 	var err = cli.StartWithPrevSession()
 	if err != nil {
 		cli.logger.Warn("failed to login the server using prev session id, connect again ", err)

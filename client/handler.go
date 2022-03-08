@@ -30,7 +30,7 @@ func (cli *Client) handleRegisterTunnelRes(command *cmd.RegisterTunnelRes) error
 }
 
 func (cli *Client) handleViewProxyResp(command *cmd.ViewProxyResp){
-	cli.proxiesChan <- command.Tunnels
+	cli.proxiesChan <- command.Items
 }
 
 func (cli *Client) registerProxy(command *cmd.RequestProxy) error{

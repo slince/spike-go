@@ -42,7 +42,7 @@ func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn,
 		if _, exists := ser.Workers[tun.ServerPort];exists {
 			tunResult.Error = fmt.Sprintf("the tunnel for port %d is exists", tun.ServerPort)
 		} else {
-			ser.Workers[tun.ServerPort] = newWorker(ser, tun, conn, bridge)
+			ser.Workers[tun.ServerPort] = newWorker(ser, tun, conn, bridge, client)
 			ser.logger.Info("Starting the worker for tunnel ", tun.ServerPort)
 			err = ser.Workers[tun.ServerPort].Start()
 			if err != nil {
@@ -70,4 +70,28 @@ func (ser *Server) handleRegisterProxy(command *cmd.RegisterProxy, conn net.Conn
 		return true, nil
 	}
 	return false, fmt.Errorf("cannot find worker for the tunnel port %d", command.Tunnel.ServerPort)
+}
+
+
+func (ser *Server) handleViewProxy(command *cmd.ViewProxy, bridge *transfer.Bridge) error {
+	var _, err = ser.GetClient(command.ClientId)
+	if err != nil {
+		return err
+	}
+
+	var items = make([]cmd.ProxyItem, 0)
+	for _, client := range ser.Clients {
+		for _, tun := range client.Tunnels {
+			items = append(items, cmd.ProxyItem{
+				Tunnel: tun,
+				ClientId: client.Id,
+				RemoteAddress: client.Conn.RemoteAddr().String(),
+			})
+		}
+	}
+	var resp = &cmd.ViewProxyResp{
+		Items: items,
+	}
+
+	return bridge.Write(resp)
 }

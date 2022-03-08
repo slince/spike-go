@@ -13,15 +13,16 @@ type Worker struct {
 	ser *Server
 	tun        tunnel.Tunnel
 	conn       net.Conn
-	socket     net.Listener
 	bridge     *transfer.Bridge
+	cli *Client
+	socket     net.Listener
 	proxyConns *conn.Pool
 	stop chan bool
 }
 
-func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge) *Worker {
+func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge, cli *Client) *Worker {
 	var worker = &Worker{
-		ser, tun, conn, nil, bridge, nil, make(chan bool, 1),
+		ser, tun, conn, bridge, cli, nil, nil,make(chan bool, 1),
 	}
 	worker.Init()
 	return worker

@@ -84,5 +84,11 @@ type ViewProxy struct {
 
 type ViewProxyResp struct {
 	transfer.BaseCommand
-	Tunnels []tunnel.Tunnel
+	Items []ProxyItem
+}
+
+type ProxyItem struct {
+	Tunnel tunnel.Tunnel
+	ClientId string
+	RemoteAddress string
 }
