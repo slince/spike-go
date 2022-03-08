@@ -17,12 +17,11 @@ type Worker struct {
 	cli *Client
 	socket     net.Listener
 	proxyConns *conn.Pool
-	stop chan bool
 }
 
 func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge, cli *Client) *Worker {
 	var worker = &Worker{
-		ser, tun, conn, bridge, cli, nil, nil,make(chan bool, 1),
+		ser, tun, conn, bridge, cli, nil, nil,
 	}
 	worker.Init()
 	return worker
@@ -39,39 +38,28 @@ func (w *Worker) Init() {
 }
 
 func (w *Worker) Start() (err error) {
-	address := "0.0.0.0:" + strconv.Itoa(int(w.tun.ServerPort))
+	var address = "0.0.0.0:" + strconv.Itoa(w.tun.ServerPort)
 	socket, err := net.Listen("tcp", address)
 	if err != nil {
 		return
 	}
 	w.socket = socket
 
-	//first request proxy
-	//err = w.requestProxy()
-	//if err != nil {
-	//	w.ser.logger.Error("Failed to send request proxy command")
-	//}
 	go func() {
-		defer close(w.stop)
 		for {
-			select {
-			case <- w.stop:
+			var con, err1 = socket.Accept()
+			if err1 != nil {
+				err = err1
 				return
-			default:
-				var con, err1 = socket.Accept()
-				if err1 != nil {
-					err = err1
-					return
-				}
-				go w.handleConn(con)
 			}
+			go w.handleConn(con)
 		}
 	}()
 	return
 }
 
 func (w *Worker) Close() {
-	w.stop <- true
+	_ = w.socket.Close()
 }
 
 func (w *Worker) addProxyConn(conn net.Conn) {

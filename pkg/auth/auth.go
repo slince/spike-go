@@ -14,6 +14,12 @@ type SimpleAuth struct {
 }
 
 func (au *SimpleAuth) Check(login *cmd.Login) User {
+	if len(au.Users) == 0 {
+		return &GenericUser{
+			Username: login.Username,
+			Password: login.Password,
+		}
+	}
 	for _, u := range au.Users {
 		if u.Password == login.Password && u.Username == login.Username {
 			return &u

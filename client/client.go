@@ -12,7 +12,9 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -28,6 +30,7 @@ type Client struct {
 	logger   *log.Logger
 	tunnels []tunnel.Tunnel
 	proxiesChan chan []cmd.ProxyItem
+	onLogin func(command *cmd.LoginRes) error
 }
 
 func NewClient(config Configuration) (*Client, error){
@@ -44,6 +47,9 @@ func NewClient(config Configuration) (*Client, error){
 		logger:   logger,
 		tunnels:  config.Tunnels,
 		proxiesChan: make(chan []cmd.ProxyItem, 2),
+		onLogin: func(command *cmd.LoginRes) error {
+			return nil
+		},
 	}
 	return cli, err
 }
@@ -54,20 +60,21 @@ func (cli *Client) Start() (err error){
 		return
 	}
 	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
-	return cli.login()
+	return
 }
 
 func (cli *Client) StartWithPrevSession() (err error){
-	cli.conn, err = cli.newConn()
-	if err != nil {
-		return
-	}
-	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
 	var prevSession string
 	prevSession, err = attemptGetPrevSessionId()
 	if err != nil {
 		return
 	}
+
+	err = cli.Start()
+	if err != nil {
+		return
+	}
+
 	cli.id = prevSession
 	return
 }
@@ -77,11 +84,34 @@ func (cli *Client) Listen() (err error){
 	if err != nil {
 		return
 	}
+	cli.onLogin = cli.onLoginCall
+	err = cli.login()
+	if err != nil {
+		return
+	}
+	go cli.graceExit()
 	err = cli.handleConn()
 	if err != nil {
 		cli.logger.Error("Error: ", err)
 	}
 	return
+}
+
+func (cli *Client) onLoginCall(command *cmd.LoginRes) error{
+	var err error
+	if len(command.ClientId) > 0 {
+		cli.id = command.ClientId
+		cli.logger.Info("Logged in to the server, client id:", cli.id)
+		var err2 = saveSessionId(cli.id)
+		if err2 != nil {
+			cli.logger.Warn("Fail to dump client id to the session file")
+		}
+		go cli.autoPing() // heartbeat
+		err = cli.registerTunnels()
+	} else {
+		err= fmt.Errorf("failed to log in to the server: %s", command.Error)
+	}
+	return err
 }
 
 func (cli *Client) autoPing(){
@@ -138,18 +168,7 @@ func (cli *Client) handleConn() (err error){
 		case *cmd.ServerPong:
 			cli.activeAt = time.Now()
 		case *cmd.LoginRes:
-			if len(command.ClientId) > 0 {
-				cli.id = command.ClientId
-				cli.logger.Info("Logged in to the server, client id:", cli.id)
-				var err2 = saveSessionId(cli.id)
-				if err2 != nil {
-					cli.logger.Warn("Fail to dump client id to the session file")
-				}
-				go cli.autoPing() // heartbeat
-				err = cli.registerTunnels()
-			} else {
-				err= fmt.Errorf("failed to log in to the server: %s", command.Error)
-			}
+			err = cli.onLogin(command)
 		case *cmd.RegisterTunnelRes:
 			err = cli.handleRegisterTunnelRes(command)
 		case *cmd.RequestProxy:
@@ -162,6 +181,53 @@ func (cli *Client) handleConn() (err error){
 			return
 		}
 	}
+}
+
+
+func (cli *Client) GetProxies() ([]cmd.ProxyItem, error){
+	var err = cli.StartWithPrevSession()
+	if err != nil {
+		cli.logger.Warn("Failed to login the server using prev session id, connect again")
+		cli.onLogin = func(command *cmd.LoginRes) error {
+			cli.id = command.ClientId
+			return cli.sendCommand(&cmd.ViewProxy{
+				ClientId: cli.id,
+			})
+		}
+		err = cli.Start()
+		if err != nil {
+			return nil, err
+		}
+		err = cli.login()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = cli.sendCommand(&cmd.ViewProxy{
+			ClientId: cli.id,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	go cli.handleConn()
+	var timer = time.After(5 * time.Second)
+	for {
+		select {
+		case <-timer:
+			return nil, errors.New("timeout to get proxies")
+		case tunnels := <-cli.proxiesChan:
+			return tunnels, nil
+		}
+	}
+}
+
+func (cli *Client) graceExit(){
+	var exit = make(chan os.Signal)
+	signal.Notify(exit, syscall.SIGINT, syscall.SIGTERM)
+	<- exit
+	_ = removeSessionFile()
+	os.Exit(0)
 }
 
 func saveSessionId(clientId string) error{
@@ -198,31 +264,4 @@ func attemptGetPrevSessionId() (string, error){
 	}
 	read, err := ioutil.ReadFile(file)
 	return string(read), err
-}
-
-func (cli *Client) GetProxies() ([]cmd.ProxyItem, error){
-	var err = cli.StartWithPrevSession()
-	if err != nil {
-		cli.logger.Warn("failed to login the server using prev session id, connect again ", err)
-		err = cli.Start()
-		if err != nil {
-			return nil, err
-		}
-	}
-	go cli.handleConn()
-	err = cli.sendCommand(&cmd.ViewProxy{
-		ClientId: cli.id,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var timer = time.After(5 * time.Second)
-	for {
-		select {
-		case <-timer:
-			return nil, errors.New("timeout to get proxies")
-		case tunnels := <-cli.proxiesChan:
-			return tunnels, nil
-		}
-	}
 }

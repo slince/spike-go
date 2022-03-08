@@ -32,6 +32,7 @@ func init(){
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",8808, "Server port")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u","admin", "User for login")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "admin", "Password for the given user")
+
 }
 
 func start() error{

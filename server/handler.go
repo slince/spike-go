@@ -42,12 +42,13 @@ func (ser *Server) handleRegisterTun(command *cmd.RegisterTunnel, conn net.Conn,
 		if _, exists := ser.Workers[tun.ServerPort];exists {
 			tunResult.Error = fmt.Sprintf("the tunnel for port %d is exists", tun.ServerPort)
 		} else {
-			ser.Workers[tun.ServerPort] = newWorker(ser, tun, conn, bridge, client)
 			ser.logger.Info("Starting the worker for tunnel ", tun.ServerPort)
-			err = ser.Workers[tun.ServerPort].Start()
+			var worker = newWorker(ser, tun, conn, bridge, client)
+			err = worker.Start()
 			if err != nil {
-				tunResult.Error = fmt.Sprint("Failed to start the worker", err.Error())
+				tunResult.Error = fmt.Sprint("Failed to start the worker: ", err.Error())
 			} else {
+				ser.Workers[tun.ServerPort] = worker
 				client.Tunnels = append(client.Tunnels, tun)
 			}
 		}
