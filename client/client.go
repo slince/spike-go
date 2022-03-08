@@ -8,7 +8,10 @@ import (
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
+	"io/fs"
+	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"time"
 )
@@ -24,6 +27,7 @@ type Client struct {
 	activeAt time.Time
 	logger   *log.Logger
 	tunnels []tunnel.Tunnel
+	proxiesChan chan []tunnel.Tunnel
 }
 
 func NewClient(config Configuration) (*Client, error){
@@ -39,6 +43,7 @@ func NewClient(config Configuration) (*Client, error){
 		activeAt: time.Now(),
 		logger:   logger,
 		tunnels:  config.Tunnels,
+		proxiesChan: make(chan []tunnel.Tunnel, 2),
 	}
 	return cli, err
 }
@@ -49,7 +54,26 @@ func (cli *Client) Start() (err error){
 		return
 	}
 	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
-	err = cli.login()
+	return cli.login()
+}
+
+func (cli *Client) StartWithPrevSession() (err error){
+	cli.conn, err = cli.newConn()
+	if err != nil {
+		return
+	}
+	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
+	var prevSession string
+	prevSession, err = attemptGetPrevSessionId()
+	if err != nil {
+		return
+	}
+	cli.id = prevSession
+	return
+}
+
+func (cli *Client) Listen() (err error){
+	err = cli.Start()
 	if err != nil {
 		return
 	}
@@ -96,6 +120,9 @@ func (cli *Client) login() error {
 }
 
 func (cli *Client) handleConn() (err error){
+	defer func() {
+		_ = removeSessionFile()
+	}()
 	for {
 		var command transfer.Command
 		command, err = cli.bridge.Read()
@@ -114,6 +141,10 @@ func (cli *Client) handleConn() (err error){
 			if len(command.ClientId) > 0 {
 				cli.id = command.ClientId
 				cli.logger.Info("Logged in to the server, client id:", cli.id)
+				var err2 = saveSessionId(cli.id)
+				if err2 != nil {
+					cli.logger.Warn("Fail to dump client id to the session file")
+				}
 				go cli.autoPing() // heartbeat
 				err = cli.registerTunnels()
 			} else {
@@ -123,6 +154,8 @@ func (cli *Client) handleConn() (err error){
 			err = cli.handleRegisterTunnelRes(command)
 		case *cmd.RequestProxy:
 			err = cli.registerProxy(command)
+		case *cmd.ViewProxyResp:
+			cli.handleViewProxyResp(command)
 		}
 		if err!= nil {
 			_ = cli.conn.Close()
@@ -131,6 +164,65 @@ func (cli *Client) handleConn() (err error){
 	}
 }
 
-func (cli *Client) getProxies(){
+func saveSessionId(clientId string) error{
+	var file, err = getSessionFile()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, []byte(clientId), fs.ModePerm)
+}
 
+func removeSessionFile() error{
+	var file, err = getSessionFile()
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
+		return err
+	}
+	return os.Remove(file)
+}
+
+func getSessionFile() (string, error){
+	var dir, err = os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return dir + "/spike.session", nil
+}
+
+func attemptGetPrevSessionId() (string, error){
+	var file, err = getSessionFile()
+	if err != nil {
+		return "", err
+	}
+	read, err := ioutil.ReadFile(file)
+	return string(read), err
+}
+
+func (cli *Client) GetProxies() ([]tunnel.Tunnel, error){
+	var err = cli.StartWithPrevSession()
+	if err != nil {
+		cli.logger.Warn("failed to login the server using prev session id, connect again ", err)
+		err = cli.Start()
+		if err != nil {
+			return nil, err
+		}
+	}
+	go cli.handleConn()
+	err = cli.sendCommand(&cmd.ViewProxy{
+		ClientId: cli.id,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var timer = time.After(5 * time.Second)
+	for {
+		select {
+		case <-timer:
+			return nil, errors.New("timeout to get proxies")
+		case tunnels := <-cli.proxiesChan:
+			return tunnels, nil
+		}
+	}
 }

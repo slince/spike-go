@@ -15,6 +15,8 @@ const (
 	TypeRequestProxy
 	TypeRegisterProxy
 	TypeStartProxy
+	TypeViewProxy
+	TypeViewProxyResp
 )
 
 type ClientPing struct {
@@ -61,7 +63,7 @@ type TunnelResult struct {
 
 type RequestProxy struct {
 	transfer.BaseCommand
-	ServerPort uint16
+	ServerPort int
 }
 
 type RegisterProxy struct {
@@ -73,4 +75,14 @@ type RegisterProxy struct {
 type StartProxy struct {
 	transfer.BaseCommand
 	Tunnel tunnel.Tunnel
+}
+
+type ViewProxy struct {
+	transfer.BaseCommand
+	ClientId string
+}
+
+type ViewProxyResp struct {
+	transfer.BaseCommand
+	Tunnels []tunnel.Tunnel
 }

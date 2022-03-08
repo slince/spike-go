@@ -23,10 +23,14 @@ func (cli *Client) handleRegisterTunnelRes(command *cmd.RegisterTunnelRes) error
 			errNum ++
 		}
 	}
-	if errNum == len(command.Results) {
+	if errNum > 0 && errNum == len(command.Results) {
 		return errors.New("all tunnels register failed")
 	}
 	return nil
+}
+
+func (cli *Client) handleViewProxyResp(command *cmd.ViewProxyResp){
+	cli.proxiesChan <- command.Tunnels
 }
 
 func (cli *Client) registerProxy(command *cmd.RequestProxy) error{
@@ -40,7 +44,7 @@ func (cli *Client) registerProxy(command *cmd.RequestProxy) error{
 }
 
 
-func getTunnel(tunnels []tunnel.Tunnel, serverPort uint16) (tunnel.Tunnel, bool){
+func getTunnel(tunnels []tunnel.Tunnel, serverPort int) (tunnel.Tunnel, bool){
 	var target tunnel.Tunnel
 	var ok bool
 	for _, tun := range tunnels {

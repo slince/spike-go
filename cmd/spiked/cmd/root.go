@@ -28,15 +28,18 @@ var (
 func init(){
 	//rootCmd.PersistentFlags().Parse()
 	var curDir, _ = os.Getwd()
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/.spiked.yaml" , "Config file (default is Current dir/.spiked.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/spiked.yaml" , "Config file (default is Current dir/spiked.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Bind host")
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "p",8808, "Bind port")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",8808, "Bind port")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u","", "User")
-	rootCmd.PersistentFlags().StringVarP(&password, "password", "P", "", "Password for the given user")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for the given user")
 }
 
 func start() error{
-	var config = createConfig()
+	var config, err = createConfig()
+	if err != nil {
+		return err
+	}
 	ser, err := server.NewServer(config)
 	if err != nil {
 		return err
@@ -44,29 +47,28 @@ func start() error{
 	return ser.Start()
 }
 
-func createConfig() server.Configuration {
+func createConfig() (server.Configuration,error) {
 	var _, err = os.Stat(cfgFile)
 	var config server.Configuration
 	if err != nil {
-	    config = server.Configuration{
+		config = server.Configuration{
 			Users: make([]auth.GenericUser, 0),
-			Log: log.DefaultConfig,
+			Log:   log.DefaultConfig,
 		}
-	} else {
-		config, err = server.ConfigFromJsonFile(cfgFile)
+		if len(host) > 0 {
+			config.Host = host
+		}
+		if port > 0 {
+			config.Port = port
+		}
+		if len(username) > 0 {
+			config.Users = append(config.Users, auth.GenericUser{
+				Username: username, Password: password,
+			})
+		}
+		return config, nil
 	}
-	if len(host) > 0 {
-		config.Host = host
-	}
-	if port > 0 {
-		config.Port = port
-	}
-	if len(username) > 0 {
-		config.Users = append(config.Users, auth.GenericUser{
-			Username: username, Password: password,
-		})
-	}
-	return config
+	return server.ConfigFromJsonFile(cfgFile)
 }
 
 func Execute() {

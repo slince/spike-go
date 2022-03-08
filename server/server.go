@@ -41,7 +41,7 @@ type Server struct {
 	Port    int
 	Clients map[net.Conn]*Client
 	Auth    auth.Auth
-	Workers map[uint16]*Worker
+	Workers map[int]*Worker
 	lock    sync.Mutex
 	logger *log.Logger
 }
@@ -57,7 +57,7 @@ func NewServer(cfg Configuration) (*Server, error) {
 		Port:    cfg.Port,
 		Clients: make(map[net.Conn]*Client, 0),
 		Auth:    au,
-		Workers: make(map[uint16]*Worker, 0),
+		Workers: make(map[int]*Worker, 0),
 		logger: logger,
 	}
 	return ser, nil

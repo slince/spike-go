@@ -47,7 +47,7 @@ func init() {
 }
 func generateConfig() error{
 	var curDir, _ = os.Getwd()
-	var cfgFile = curDir + "/" + ".spike.yaml"
+	var cfgFile = curDir + "/" + "spike.yaml"
 	var _, err = os.Stat(cfgFile)
 	if !os.IsNotExist(err) && !force {
 		return fmt.Errorf("config file \"%s\" is exists", cfgFile)

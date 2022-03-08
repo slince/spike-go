@@ -26,7 +26,7 @@ func newWorker(cli *Client, tun tunnel.Tunnel) *Worker{
 	return &Worker{
 		cli: cli,
 		tun: tun,
-		localAddress:  localHost + ":" + strconv.Itoa(int(tun.LocalPort)),
+		localAddress:  localHost + ":" + strconv.Itoa(tun.LocalPort),
 	}
 }
 

@@ -27,48 +27,51 @@ var (
 func init(){
 	//rootCmd.PersistentFlags().Parse()
 	var curDir, _ = os.Getwd()
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/.spike.yaml" , "Config file (default is Current dir/.spike.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/spike.yaml" , "Config file (default is Current dir/spike.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Server host")
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "p",8808, "Server port")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",8808, "Server port")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u","admin", "User for login")
-	rootCmd.PersistentFlags().StringVarP(&password, "password", "P", "admin", "Password for the given user")
+	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "admin", "Password for the given user")
 }
 
 func start() error{
-	var config, err = createConfig()
+	var cli, err = createClient()
 	if err != nil {
 		return err
 	}
-	cli, err := client.NewClient(config)
-	if err != nil {
-		return err
-	}
-	return cli.Start()
+	return cli.Listen()
 }
 
-func createConfig() (client.Configuration, error){
+func createClient() (*client.Client, error){
+	var config, err = createConfig()
+	if err != nil {
+		return nil, err
+	}
+	return client.NewClient(config)
+}
+
+func createConfig() (client.Configuration, error) {
 	var _, err = os.Stat(cfgFile)
 	var config client.Configuration
 	if err != nil {
-	    config = client.Configuration{
+		config = client.Configuration{
 			Log: log.DefaultConfig,
 		}
-	} else {
-		config, err = client.ConfigFromJsonFile(cfgFile)
+		if len(host) > 0 {
+			config.Host = host
+		}
+		if port > 0 {
+			config.Port = port
+		}
+		if len(username) > 0 {
+			config.User.Username = username
+		}
+		if len(password) > 0 {
+			config.User.Password = password
+		}
+		return config, nil
 	}
-	if len(host) > 0 {
-		config.Host = host
-	}
-	if port > 0 {
-		config.Port = port
-	}
-	if len(username) > 0 {
-		config.User.Username = username
-	}
-	if len(password) > 0 {
-		config.User.Password = password
-	}
-	return config, err
+	return client.ConfigFromJsonFile(cfgFile)
 }
 
 func Execute() {
