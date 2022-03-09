@@ -55,7 +55,7 @@ func NewClient(config Configuration) (*Client, error){
 }
 
 func (cli *Client) Start() (err error){
-	cli.conn, err = cli.newConn()
+	cli.conn, err = cli.NewConn()
 	if err != nil {
 		return
 	}
@@ -124,7 +124,7 @@ func (cli *Client) autoPing(){
 	}
 }
 
-func (cli *Client) newConn() (net.Conn, error){
+func (cli *Client) NewConn() (net.Conn, error){
 	var address = cli.host + ":" + strconv.Itoa(cli.port)
 	conn, err := net.DialTimeout("tcp", address, 5 * time.Second)
 	if err == nil {

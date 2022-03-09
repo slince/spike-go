@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
+	"net"
 )
 
 const (
@@ -92,3 +93,11 @@ type ProxyItem struct {
 	ClientId string
 	RemoteAddress string
 }
+
+type UdpPackage struct {
+	transfer.BaseCommand
+	Body []byte
+	LocalAddr *net.UDPAddr
+	RemoteAddr *net.UDPAddr
+}
+

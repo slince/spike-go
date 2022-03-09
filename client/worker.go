@@ -12,8 +12,8 @@ import (
 
 type Worker struct {
 	cli *Client
-	tun tunnel.Tunnel
-	localAddress string
+	tun          tunnel.Tunnel
+	LocalAddress string
 }
 
 var defaultHost = "127.0.0.1"
@@ -24,18 +24,18 @@ func newWorker(cli *Client, tun tunnel.Tunnel) *Worker{
 		localHost = tun.LocalHost
 	}
 	return &Worker{
-		cli: cli,
-		tun: tun,
-		localAddress:  localHost + ":" + strconv.Itoa(tun.LocalPort),
+		cli:          cli,
+		tun:          tun,
+		LocalAddress: net.JoinHostPort(localHost, strconv.Itoa(tun.LocalPort)),
 	}
 }
 
 func (w *Worker) newLocalConn() (net.Conn, error){
-	var con, err = net.DialTimeout("tcp", w.localAddress, 5 * time.Second)
+	var con, err = net.DialTimeout("tcp", w.LocalAddress, 5 * time.Second)
 	if err != nil {
 		w.cli.logger.Error("Failed to connect local service: ", err)
 	} else {
-		w.cli.logger.Info("Connected to the local service: ", w.localAddress)
+		w.cli.logger.Info("Connected to the local service: ", w.LocalAddress)
 	}
 	return con,err
 }
@@ -44,7 +44,7 @@ func (w *Worker) start() {
 	var proxyConn net.Conn
 	var err error
 
-	proxyConn, err = w.cli.newConn()
+	proxyConn, err = w.cli.NewConn()
 	if err != nil {
 		return
 	}

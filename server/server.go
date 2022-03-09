@@ -107,7 +107,7 @@ func (ser *Server) checkAlive(){
 }
 
 func (ser *Server) handleConn(conn net.Conn) {
-	var bridge = transfer.NewBridge(ft, conn, conn)
+	var bridge = cmd.NewBridge(conn)
 
 	ParseCommand:
 		for {

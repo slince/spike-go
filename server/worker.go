@@ -1,12 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
+	"github.com/slince/spike/server/proxy"
 	"net"
-	"strconv"
 )
 
 type Worker struct {
@@ -15,63 +16,54 @@ type Worker struct {
 	conn       net.Conn
 	bridge     *transfer.Bridge
 	cli *Client
-	socket     net.Listener
-	proxyConns *conn.Pool
+	handler proxy.Handler
 }
 
 func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.Bridge, cli *Client) *Worker {
 	var worker = &Worker{
-		ser, tun, conn, bridge, cli, nil, nil,
+		ser, tun, conn, bridge, cli, nil,
 	}
-	worker.Init()
 	return worker
 }
 
-func (w *Worker) Init() {
-	w.proxyConns = conn.NewPool(10, func(pool *conn.Pool) {
+func (w *Worker) Start()  error {
+	var handler, err = w.createHandler()
+	if err != nil {
+		return err
+	}
+	w.handler = handler
+	return handler.Listen(w.tun.ServerPort)
+}
+
+func (w *Worker) createHandler() (proxy.Handler, error){
+	var handler proxy.Handler
+	var connPool = conn.NewPool(10, func(pool *conn.Pool) {
 		w.ser.logger.Info("Request to client for proxy connection")
 		err := w.requestProxy()
 		if err != nil {
 			w.ser.logger.Error("Failed to send request proxy command")
 		}
 	})
-}
-
-func (w *Worker) Start() (err error) {
-	var address = "0.0.0.0:" + strconv.Itoa(w.tun.ServerPort)
-	socket, err := net.Listen("tcp", address)
-	if err != nil {
-		return
+	var err error
+	switch w.tun.Protocol {
+	case "tcp":
+		handler = proxy.NewTcpHandler(w.ser.logger, connPool)
+	case "udp":
+		handler = proxy.NewUdpHandler(connPool)
+	default:
+		err = fmt.Errorf("unsupported tunel protocol %s", w.tun.Protocol)
 	}
-	w.socket = socket
-
-	go func() {
-		for {
-			var con, err1 = socket.Accept()
-			if err1 != nil {
-				err = err1
-				return
-			}
-			go w.handleConn(con)
-		}
-	}()
-	return
+	return handler,err
 }
 
 func (w *Worker) Close() {
-	_ = w.socket.Close()
+	w.handler.Close()
 }
 
 func (w *Worker) addProxyConn(conn net.Conn) {
-	w.proxyConns.Put(conn)
+	w.handler.AddProxyConn(conn)
 }
 
 func (w *Worker) requestProxy() error {
 	return w.bridge.Write(&cmd.RequestProxy{ServerPort: w.tun.ServerPort})
-}
-
-func (w *Worker) handleConn(pubConn net.Conn) {
-	w.ser.logger.Trace("Accept a public connection:", pubConn.RemoteAddr().String())
-	var proxyConn = w.proxyConns.Get()
-	conn.Combine(proxyConn, pubConn)
 }
