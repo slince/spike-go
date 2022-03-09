@@ -15,6 +15,6 @@ tunnels:
     server_port: 8809
 
   - protocol: udp
-    local_host: 127.0.0.1
-    local_port: 80
+    local_host: 8.8.8.8
+    local_port: 53
     server_port: 8810
