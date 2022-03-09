@@ -39,7 +39,7 @@ func (cli *Client) registerProxy(command *cmd.RequestProxy) error{
 		return fmt.Errorf("cannot find tunnel config for server port: %d", command.ServerPort)
 	}
 	var worker = newWorker(cli, tun)
-	go worker.start()
+	go worker.Start()
 	return nil
 }
 

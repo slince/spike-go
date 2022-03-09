@@ -26,7 +26,7 @@ func newWorker(ser *Server, tun tunnel.Tunnel, conn net.Conn, bridge *transfer.B
 	return worker
 }
 
-func (w *Worker) Start()  error {
+func (w *Worker) Start() error {
 	var handler, err = w.createHandler()
 	if err != nil {
 		return err

@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"github.com/slince/spike/client"
+	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
@@ -11,25 +11,28 @@ import (
 
 type TcpHandler struct {
 	logger *log.Logger
-	cli *client.Client
 	localAddress string
 	proxyConn net.Conn
 	bridge *transfer.Bridge
 }
 
-func NewTcpHandler() *TcpHandler{
+func NewTcpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) *TcpHandler{
 	return &TcpHandler{
-
+		logger: logger,
+		localAddress: localAddress,
+		proxyConn: proxyConn,
+		bridge: cmd.NewBridge(proxyConn),
 	}
 }
 
-func (tcp *TcpHandler) start(proxyConn net.Conn) {
+func (tcp *TcpHandler) Start() error {
 	localConn, err := tcp.newLocalConn()
 	if err != nil {
-		return
+		return err
 	}
-	conn.Combine(localConn, proxyConn)
+	conn.Combine(localConn, tcp.proxyConn)
 	tcp.logger.Info("The worker is closed")
+	return nil
 }
 
 

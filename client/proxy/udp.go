@@ -27,6 +27,28 @@ func NewUdpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) 
 	}
 }
 
+func (udp *UdpHandler) Start() error{
+	// Read Msg
+	go func() {
+	Handle:
+		for {
+			var command, err = udp.bridge.Read()
+			if err != nil {
+				break
+			}
+			switch command := command.(type) {
+			case *cmd.UdpPackage:
+				//udp.messages <- command
+				go udp.handleMessage(command)
+			default:
+				break Handle
+			}
+		}
+		udp.proxyConn.Close()
+	}()
+	return nil
+}
+
 func (udp *UdpHandler) handleMessage(msg *cmd.UdpPackage) error{
 	udp.lock.Lock()
 	localConn, ok := udp.localConnMap[msg.RemoteAddr]
@@ -67,29 +89,6 @@ func (udp *UdpHandler) joinLocalToProxy(localConn *net.UDPConn, remoteAddr *net.
 		}
 	}
 	_ = udp.proxyConn.Close()
-}
-
-func (udp *UdpHandler) Start(proxyConn net.Conn) error{
-	var bridge = cmd.NewBridge(proxyConn)
-	// Read Msg
-	go func() {
-		Handle:
-		for {
-			var command, err = bridge.Read()
-			if err != nil {
-				break
-			}
-			switch command := command.(type) {
-			case *cmd.UdpPackage:
-				//udp.messages <- command
-				go udp.handleMessage(command)
-			default:
-				break Handle
-			}
-		}
-		proxyConn.Close()
-	}()
-	return nil
 }
 
 func (udp *UdpHandler) newLocalConn() (*net.UDPConn, error){
