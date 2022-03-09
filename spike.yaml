@@ -1,8 +1,8 @@
 host: 127.0.0.1 # server host
-port: 8810
+port: 8808
 user:
   username: admin
-  password: 123456
+  password: admin
 
 log:
   console: true  # enable console output
@@ -11,8 +11,8 @@ log:
 
 tunnels:
   - protocol: tcp
-    localport: 3306
-    serverport: 8809
+    local_port: 3306
+    server_port: 8809
 
   - protocol: udp
     local_host: 127.0.0.1

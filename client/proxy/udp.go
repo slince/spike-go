@@ -15,6 +15,7 @@ type UdpHandler struct {
 	localConnMap map[*net.UDPAddr]*net.UDPConn
 	proxyConn net.Conn
 	bridge *transfer.Bridge
+	messages chan *cmd.UdpPackage
 }
 
 func NewUdpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) *UdpHandler{
@@ -24,13 +25,14 @@ func NewUdpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) 
 		localConnMap: make(map[*net.UDPAddr]*net.UDPConn),
 		proxyConn: proxyConn,
 		bridge: cmd.NewBridge(proxyConn),
+		messages: make(chan *cmd.UdpPackage, 100),
 	}
 }
 
 func (udp *UdpHandler) Start() error{
 	// Read Msg
 	go func() {
-	Handle:
+		Handle:
 		for {
 			var command, err = udp.bridge.Read()
 			if err != nil {
@@ -38,14 +40,17 @@ func (udp *UdpHandler) Start() error{
 			}
 			switch command := command.(type) {
 			case *cmd.UdpPackage:
-				//udp.messages <- command
-				go udp.handleMessage(command)
+				udp.messages <- command
 			default:
 				break Handle
 			}
 		}
 		udp.proxyConn.Close()
 	}()
+
+	for msg := range udp.messages {
+		go udp.handleMessage(msg)
+	}
 	return nil
 }
 
