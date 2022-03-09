@@ -4,6 +4,7 @@ import (
 	"github.com/slince/spike/client"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/log"
+	"github.com/slince/spike/pkg/transfer"
 	"net"
 	"time"
 )
@@ -12,6 +13,14 @@ type TcpHandler struct {
 	logger *log.Logger
 	cli *client.Client
 	localAddress string
+	proxyConn net.Conn
+	bridge *transfer.Bridge
+}
+
+func NewTcpHandler() *TcpHandler{
+	return &TcpHandler{
+
+	}
 }
 
 func (tcp *TcpHandler) start(proxyConn net.Conn) {

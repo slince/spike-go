@@ -61,8 +61,8 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 			}
 			switch command := command.(type) {
 			case *cmd.UdpPackage:
-				_, err2 := udpConn.WriteToUDP(command.Body, command.RemoteAddr)
-				if err2 != nil {
+				_, err = udpConn.WriteToUDP(command.Body, command.RemoteAddr)
+				if err != nil {
 					break Handle
 				}
 			default:
