@@ -8,8 +8,8 @@ import (
 )
 
 type TcpHandler struct {
-	logger *log.Logger
-	socket net.Listener
+	logger        *log.Logger
+	listener      net.Listener
 	proxyConnPool *conn.Pool
 }
 
@@ -22,15 +22,15 @@ func NewTcpHandler(logger *log.Logger, connPool *conn.Pool) *TcpHandler{
 
 func (tcp *TcpHandler) Listen(serverPort int) error{
 	var address, err = net.ResolveTCPAddr("tcp", net.JoinHostPort("0.0.0.0", strconv.Itoa(serverPort)))
-	socket, err := net.ListenTCP("tcp", address)
+	listener, err := net.ListenTCP("tcp", address)
 	if err != nil {
 		return err
 	}
-	tcp.socket = socket
+	tcp.listener = listener
 
 	go func() {
 		for {
-			var con, err1 = socket.Accept()
+			var con, err1 = listener.Accept()
 			if err1 != nil {
 				err = err1
 				break
@@ -47,7 +47,7 @@ func (tcp *TcpHandler) AddProxyConn(proxyConn net.Conn) {
 }
 
 func (tcp *TcpHandler) Close() {
-	_ = tcp.socket.Close()
+	_ = tcp.listener.Close()
 }
 
 func (tcp *TcpHandler) handleConn(pubConn net.Conn) {

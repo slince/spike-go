@@ -7,6 +7,7 @@ import (
 )
 
 type Pool struct {
+	num int
 	conns    chan net.Conn
 	timeout  int
 	callback func(pool *Pool)
@@ -21,6 +22,9 @@ func NewPool(max int, timeout int, callback func(pool *Pool)) *Pool {
 }
 
 func (p *Pool) Get() (net.Conn, error) {
+	if len(p.conns) < cap(p.conns) {
+		p.callback(p)
+	}
 	for {
 		var after = time.After(time.Second * time.Duration(p.timeout))
 		select {

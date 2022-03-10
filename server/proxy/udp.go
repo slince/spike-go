@@ -11,7 +11,7 @@ import (
 type UdpHandler struct {
 	logger *log.Logger
 	proxyConnPool *conn.Pool
-	conn  *net.UDPConn
+	listener  *net.UDPConn
 }
 
 func NewUdpHandler(logger *log.Logger, connPool *conn.Pool) *UdpHandler{
@@ -27,8 +27,8 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 	if err != nil {
 		return err
 	}
-	udpConn, err := net.ListenUDP("udp", address)
-	udp.conn = udpConn
+	listener, err := net.ListenUDP("udp", address)
+	udp.listener = listener
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 	go func() {
 		var proxyConn, err  = udp.proxyConnPool.Get()
 		if err != nil {
-			udp.logger.Error("Failed to get proxy conn from client, error", err)
+			udp.logger.Error("The worker is closed, failed to get proxy conn from client, error: ", err)
 			return
 		}
 		var bridge = cmd.NewBridge(proxyConn)
@@ -44,7 +44,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 		go func() {
 			buf := make([]byte, 1024)
 			for {
-				read, remoteAddr, _ := udpConn.ReadFromUDP(buf)
+				read, remoteAddr, _ := listener.ReadFromUDP(buf)
 				if read == 0 {
 					break
 				}
@@ -58,7 +58,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 					break
 				}
 			}
-			udpConn.Close()
+			listener.Close()
 			proxyConn.Close()
 		}()
 
@@ -71,7 +71,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 				}
 				switch command := command.(type) {
 				case *cmd.UdpPackage:
-					_, err = udpConn.WriteToUDP(command.Body, command.RemoteAddr)
+					_, err = listener.WriteToUDP(command.Body, command.RemoteAddr)
 					if err != nil {
 						break Handle
 					}
@@ -79,7 +79,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 					break Handle
 				}
 			}
-			udpConn.Close()
+			listener.Close()
 			proxyConn.Close()
 		}()
 	}()
@@ -92,5 +92,5 @@ func (udp *UdpHandler) AddProxyConn(proxyConn net.Conn) {
 }
 
 func (udp *UdpHandler) Close() {
-	_ = udp.conn.Close()
+	_ = udp.listener.Close()
 }

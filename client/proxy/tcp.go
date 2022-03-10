@@ -31,7 +31,6 @@ func (tcp *TcpHandler) Start() error {
 		return err
 	}
 	conn.Combine(localConn, tcp.proxyConn)
-	tcp.logger.Info("The worker is closed")
 	return nil
 }
 
