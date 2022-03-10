@@ -37,7 +37,7 @@ func (w *Worker) Start() error {
 
 func (w *Worker) createHandler() (proxy.Handler, error){
 	var handler proxy.Handler
-	var connPool = conn.NewPool(10, func(pool *conn.Pool) {
+	var connPool = conn.NewPool(100, 5, func(pool *conn.Pool) {
 		w.ser.logger.Info("Request to client for proxy connection")
 		err := w.requestProxy()
 		if err != nil {

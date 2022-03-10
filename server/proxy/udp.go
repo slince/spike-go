@@ -34,7 +34,11 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 	}
 
 	go func() {
-		var proxyConn = udp.proxyConnPool.Get()
+		var proxyConn, err  = udp.proxyConnPool.Get()
+		if err != nil {
+			udp.logger.Error("Failed to get proxy conn from client, error", err)
+			return
+		}
 		var bridge = cmd.NewBridge(proxyConn)
 
 		go func() {

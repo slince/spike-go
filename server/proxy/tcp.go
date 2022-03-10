@@ -52,6 +52,10 @@ func (tcp *TcpHandler) Close() {
 
 func (tcp *TcpHandler) handleConn(pubConn net.Conn) {
 	tcp.logger.Trace("Accept a public connection:", pubConn.RemoteAddr().String())
-	var proxyConn = tcp.proxyConnPool.Get()
+	var proxyConn, err = tcp.proxyConnPool.Get()
+	if err != nil {
+		tcp.logger.Error("Failed to get proxy conn from client, error", err)
+		pubConn.Close()
+	}
 	conn.Combine(proxyConn, pubConn)
 }
