@@ -67,7 +67,7 @@ func (udp *UdpHandler) handleMessage(msg *cmd.UdpPackage) error{
 		go udp.joinLocalToProxy(localConn, msg.RemoteAddr)
 	}
 	udp.lock.Unlock()
-	_, err = localConn.WriteToUDP(msg.Body, nil)
+	_, err = localConn.Write(msg.Body)
 	if err != nil {
 		udp.lock.Lock()
 		delete(udp.localConnMap, msg.RemoteAddr)
@@ -80,7 +80,7 @@ func (udp *UdpHandler) handleMessage(msg *cmd.UdpPackage) error{
 func (udp *UdpHandler) joinLocalToProxy(localConn *net.UDPConn, remoteAddr *net.UDPAddr){
 	var buf = make([]byte, 1024)
 	for {
-		read, _, err := localConn.ReadFromUDP(buf)
+		read, err := localConn.Read(buf)
 		if read == 0 {
 			break
 		}

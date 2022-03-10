@@ -59,7 +59,7 @@ func (cli *Client) Start() (err error){
 	if err != nil {
 		return
 	}
-	cli.bridge = transfer.NewBridge(ft, cli.conn, cli.conn)
+	cli.bridge = cmd.NewBridge(cli.conn)
 	return
 }
 

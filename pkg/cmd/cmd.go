@@ -18,6 +18,7 @@ const (
 	TypeStartProxy
 	TypeViewProxy
 	TypeViewProxyResp
+	TypeUdpPackage
 )
 
 type ClientPing struct {

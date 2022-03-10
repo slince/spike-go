@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/slince/spike/client/proxy"
 	"github.com/slince/spike/pkg/cmd"
-	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
 	"net"
 	"strconv"
@@ -47,7 +46,7 @@ func (w *Worker) Start() {
 		return
 	}
 
-	var bridge = transfer.NewBridge(ft, proxyConn, proxyConn)
+	var bridge = cmd.NewBridge(proxyConn)
 	_ = bridge.Write(&cmd.RegisterProxy{Tunnel: w.tun, ClientId: w.cli.id})
 
 	handler, err := w.createHandler(proxyConn)

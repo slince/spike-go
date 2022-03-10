@@ -19,6 +19,7 @@ var types = map[transfer.MsgType]transfer.Command{
 
 	TypeViewProxy: &ViewProxy{},
 	TypeViewProxyResp: &ViewProxyResp{},
+	TypeUdpPackage: &UdpPackage{},
 }
 
 func init(){

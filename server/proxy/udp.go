@@ -3,17 +3,20 @@ package proxy
 import (
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
+	"github.com/slince/spike/pkg/log"
 	"net"
 	"strconv"
 )
 
 type UdpHandler struct {
+	logger *log.Logger
 	proxyConnPool *conn.Pool
 	conn  *net.UDPConn
 }
 
-func NewUdpHandler(connPool *conn.Pool) *UdpHandler{
+func NewUdpHandler(logger *log.Logger, connPool *conn.Pool) *UdpHandler{
 	return &UdpHandler{
+		logger: logger,
 		proxyConnPool: connPool,
 	}
 }
@@ -47,6 +50,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 				}
 				err = bridge.Write(udpPackage)
 				if err != nil {
+					udp.logger.Error("Failed to write udp package to proxy conn:", err)
 					break
 				}
 			}

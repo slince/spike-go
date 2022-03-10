@@ -49,7 +49,7 @@ func (w *Worker) createHandler() (proxy.Handler, error){
 	case "tcp":
 		handler = proxy.NewTcpHandler(w.ser.logger, connPool)
 	case "udp":
-		handler = proxy.NewUdpHandler(connPool)
+		handler = proxy.NewUdpHandler(w.ser.logger, connPool)
 	default:
 		err = fmt.Errorf("unsupported tunel protocol %s", w.tun.Protocol)
 	}
