@@ -94,8 +94,7 @@ func (ser *Server) Start() error {
 func (ser *Server) checkAlive(){
 	var timer = time.NewTicker(10 * time.Second)
 	defer timer.Stop()
-	for {
-		<- timer.C
+	for range timer.C {
 		ser.logger.Trace("Check all clients are alive:", len(ser.Clients))
 		var aliveTime = time.Now().Add(-20 * time.Second)
 		for _, client := range ser.Clients {
@@ -113,13 +112,10 @@ func (ser *Server) handleConn(conn net.Conn) {
 		for {
 			var command, err = bridge.Read()
 			if err != nil {
-				if _, ok := err.(*net.OpError); ok {
-					err = errors.New("the client connection is expired")
-				}
-				if err == io.EOF {
+				if _, ok := err.(*net.OpError); ok || err == io.EOF{
 					err = errors.New("the client is closed")
 				}
-				ser.logger.Warn("Failed to read command: ", err)
+				ser.logger.Warn("Failed to read command from client: ", err)
 				if client, ok := ser.Clients[conn]; ok {
 					ser.closeClient(client)
 				}
@@ -162,6 +158,7 @@ func (ser *Server) closeClient(client *Client) {
 		ser.closeTunnel(tun)
 	}
 	delete(ser.Clients, client.Conn)
+	_ = client.Conn.Close()
 	ser.logger.Info("The tunnel workers for the client are closed:", client.Id)
 }
 

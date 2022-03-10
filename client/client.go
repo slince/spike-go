@@ -8,6 +8,7 @@ import (
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
 	"github.com/slince/spike/pkg/tunnel"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"net"
@@ -106,7 +107,7 @@ func (cli *Client) onLoginCall(command *cmd.LoginRes) error{
 		if err2 != nil {
 			cli.logger.Warn("Fail to dump client id to the session file")
 		}
-		go cli.autoPing() // heartbeat
+		//go cli.autoPing() // heartbeat
 		err = cli.registerTunnels()
 	} else {
 		err= fmt.Errorf("failed to log in to the server: %s", command.Error)
@@ -116,8 +117,7 @@ func (cli *Client) onLoginCall(command *cmd.LoginRes) error{
 
 func (cli *Client) autoPing(){
 	var timer = time.NewTicker(10 * time.Second)
-	for {
-		<- timer.C
+	for range timer.C{
 		_ = cli.sendCommand(&cmd.ClientPing{
 			ClientId: cli.id,
 		})
@@ -157,10 +157,10 @@ func (cli *Client) handleConn() (err error){
 		var command transfer.Command
 		command, err = cli.bridge.Read()
 		if err != nil {
-			if _, ok := err.(*net.OpError); ok {
+			if _, ok := err.(*net.OpError); ok || err == io.EOF{
 				err = errors.New("the connection is expired")
 			}
-			cli.logger.Warn("Failed to read command: ", err)
+			cli.logger.Warn("Failed to read command from server: ", err)
 			return
 		}
 		cli.logger.Trace("Receive a command:", command)

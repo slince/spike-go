@@ -8,7 +8,6 @@ import (
 	"github.com/slince/spike/pkg/tunnel"
 	"github.com/slince/spike/server/proxy"
 	"net"
-	"strconv"
 )
 
 type Worker struct {
@@ -33,7 +32,16 @@ func (w *Worker) Start() error {
 		return err
 	}
 	w.handler = handler
-	return handler.Listen(w.tun.ServerPort)
+	stop, err := handler.Listen()
+	if err != nil {
+		return err
+	}
+	go func() {
+		<- stop
+		close(stop)
+		w.ser.logger.Info(fmt.Sprintf("The worker for %d is closed", w.tun.ServerPort))
+	}()
+	return nil
 }
 
 func (w *Worker) createHandler() (proxy.Handler, error){
@@ -45,15 +53,14 @@ func (w *Worker) createHandler() (proxy.Handler, error){
 			w.ser.logger.Error("Failed to send request proxy command")
 		}
 	})
-	var localAddress = net.JoinHostPort(w.tun.LocalHost, strconv.Itoa(w.tun.LocalPort))
 	var err error
 	switch w.tun.Protocol {
 	case "tcp":
-		handler = proxy.NewTcpHandler(w.ser.logger, connPool, localAddress)
+		handler = proxy.NewTcpHandler(w.ser.logger, connPool, w.tun)
 	case "udp":
-		handler = proxy.NewUdpHandler(w.ser.logger, connPool)
+		handler = proxy.NewUdpHandler(w.ser.logger, connPool, w.tun)
 	case "http":
-		handler = proxy.NewHttpHandler(w.ser.logger, connPool, localAddress, w.tun.Headers)
+		handler = proxy.NewHttpHandler(w.ser.logger, connPool, w.tun, w.tun.Headers)
 	default:
 		err = fmt.Errorf("unsupported tunel protocol %s", w.tun.Protocol)
 	}

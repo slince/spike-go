@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/log"
+	"github.com/slince/spike/pkg/tunnel"
 	"io"
 	"net"
 	"net/http"
@@ -16,13 +17,9 @@ type HttpHandler struct {
 	headers map[string]string
 }
 
-func NewHttpHandler(logger *log.Logger, connPool *conn.Pool, localAddress string, headers map[string]string) *HttpHandler{
+func NewHttpHandler(logger *log.Logger, connPool *conn.Pool, tun tunnel.Tunnel, headers map[string]string) *HttpHandler{
 	var handler = &HttpHandler{
-		TcpHandler: TcpHandler{
-			logger: logger,
-			proxyConnPool: connPool,
-			localAddress: localAddress,
-		},
+		TcpHandler: *NewTcpHandler(logger,connPool,tun),
 		headers: headers,
 	}
 	handler.handleConnCallback = handler.handleConn

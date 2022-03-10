@@ -3,7 +3,7 @@ package proxy
 import "net"
 
 type Handler interface {
-	Listen(serverPort int) error
+	Listen() (chan bool, error)
 	Close()
 	AddProxyConn(proxyConn net.Conn)
 }

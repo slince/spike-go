@@ -5,34 +5,44 @@ import (
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/transfer"
+	"github.com/slince/spike/pkg/tunnel"
 	"net"
 	"strconv"
+	"sync"
 )
 
 type UdpHandler struct {
 	logger *log.Logger
 	proxyConnPool *conn.Pool
+	tun tunnel.Tunnel
+
 	listener  *net.UDPConn
+	listenAddress string
+	//stop chan bool
 }
 
-func NewUdpHandler(logger *log.Logger, connPool *conn.Pool) *UdpHandler{
+func NewUdpHandler(logger *log.Logger, connPool *conn.Pool, tun tunnel.Tunnel) *UdpHandler{
 	return &UdpHandler{
 		logger: logger,
 		proxyConnPool: connPool,
+		tun: tun,
+		listenAddress: net.JoinHostPort("0.0.0.0", strconv.Itoa(tun.ServerPort)),
+		//stop: make(chan bool, 1),
 	}
 }
 
-func (udp *UdpHandler) Listen(serverPort int) error {
-
-	var address, err = net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.Itoa(serverPort)))
+func (udp *UdpHandler) Listen() (chan bool, error) {
+	var address, err = net.ResolveUDPAddr("udp", udp.listenAddress)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	listener, err := net.ListenUDP("udp", address)
 	udp.listener = listener
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var stop = make(chan bool, 1)
 
 	go func() {
 		var proxyConn, err  = udp.proxyConnPool.Get()
@@ -41,6 +51,8 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 			return
 		}
 		var bridge = cmd.NewBridge(proxyConn)
+		var wait sync.WaitGroup
+		wait.Add(2)
 
 		go func() {
 			buf := make([]byte, 1024)
@@ -61,6 +73,7 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 			}
 			listener.Close()
 			proxyConn.Close()
+			wait.Done()
 		}()
 
 		go func() {
@@ -83,13 +96,14 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 					break Handle
 				}
 			}
-
 			listener.Close()
 			proxyConn.Close()
+			wait.Done()
 		}()
+		wait.Wait()
+		stop <- true
 	}()
-
-	return nil
+	return stop, nil
 }
 
 func (udp *UdpHandler) AddProxyConn(proxyConn net.Conn) {
@@ -97,5 +111,6 @@ func (udp *UdpHandler) AddProxyConn(proxyConn net.Conn) {
 }
 
 func (udp *UdpHandler) Close() {
+	//udp.stop <- true
 	_ = udp.listener.Close()
 }
