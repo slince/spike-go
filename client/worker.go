@@ -64,7 +64,7 @@ func (w *Worker) createHandler(proxyConn net.Conn) (proxy.Handler, error){
 	var handler proxy.Handler
 	var err error
 	switch w.tun.Protocol {
-	case "tcp":
+	case "tcp", "http":
 		handler = proxy.NewTcpHandler(w.cli.logger, w.localAddress, proxyConn)
 	case "udp":
 		handler = proxy.NewUdpHandler(w.cli.logger, w.localAddress, proxyConn)

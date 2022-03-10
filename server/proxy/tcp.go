@@ -10,14 +10,19 @@ import (
 type TcpHandler struct {
 	logger        *log.Logger
 	listener      net.Listener
+	localAddress string
 	proxyConnPool *conn.Pool
+	handleConnCallback func(pubConn net.Conn)
 }
 
-func NewTcpHandler(logger *log.Logger, connPool *conn.Pool) *TcpHandler{
-	return &TcpHandler{
+func NewTcpHandler(logger *log.Logger, connPool *conn.Pool, localAddress string) *TcpHandler{
+	var handler = &TcpHandler{
 		logger: logger,
 		proxyConnPool: connPool,
+		localAddress: localAddress,
 	}
+	handler.handleConnCallback = handler.handleConn
+	return handler
 }
 
 func (tcp *TcpHandler) Listen(serverPort int) error{
@@ -36,7 +41,7 @@ func (tcp *TcpHandler) Listen(serverPort int) error{
 				break
 			}
 
-			go tcp.handleConn(con)
+			go tcp.handleConnCallback(con)
 		}
 	}()
 	return nil
@@ -56,6 +61,7 @@ func (tcp *TcpHandler) handleConn(pubConn net.Conn) {
 	if err != nil {
 		tcp.logger.Error("Failed to get proxy conn from client, error", err)
 		pubConn.Close()
+		return
 	}
 	conn.Combine(proxyConn, pubConn)
 }

@@ -6,23 +6,29 @@ import (
 	"github.com/slince/spike/pkg/transfer"
 	"net"
 	"sync"
+	"time"
 )
 
 type UdpHandler struct {
 	logger *log.Logger
 	localAddress string
 	lock sync.Mutex
-	localConnMap map[*net.UDPAddr]*net.UDPConn
+	localConnMap map[*net.UDPAddr]UdpConnUnit
 	proxyConn net.Conn
 	bridge *transfer.Bridge
 	messages chan *cmd.UdpPackage
+}
+
+type UdpConnUnit struct {
+	udpConn *net.UDPConn
+	activeAt time.Time
 }
 
 func NewUdpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) *UdpHandler{
 	return &UdpHandler{
 		logger: logger,
 		localAddress: localAddress,
-		localConnMap: make(map[*net.UDPAddr]*net.UDPConn),
+		localConnMap: make(map[*net.UDPAddr]UdpConnUnit),
 		proxyConn: proxyConn,
 		bridge: cmd.NewBridge(proxyConn),
 		messages: make(chan *cmd.UdpPackage, 100),
@@ -47,6 +53,7 @@ func (udp *UdpHandler) Start() error{
 		}
 		udp.proxyConn.Close()
 	}()
+	go udp.checkAlive()
 
 	for msg := range udp.messages {
 		go udp.handleMessage(msg)
@@ -54,19 +61,52 @@ func (udp *UdpHandler) Start() error{
 	return nil
 }
 
-func (udp *UdpHandler) handleMessage(msg *cmd.UdpPackage) error{
+func (udp *UdpHandler) checkAlive(){
+	var timer = time.NewTicker(10 * time.Second)
+	defer timer.Stop()
+	for range timer.C {
+		udp.lock.Lock()
+		var aliveTime = time.Now().Add(-20 * time.Second)
+		for addr, unit := range udp.localConnMap {
+			if unit.activeAt.After(aliveTime) {
+				continue
+			}
+			_ = unit.udpConn.Close()
+			delete(udp.localConnMap, addr)
+		}
+		udp.lock.Unlock()
+	}
+}
+
+func (udp *UdpHandler) getLocalConn(remoteAddr *net.UDPAddr) (*net.UDPConn, error){
 	udp.lock.Lock()
-	localConn, ok := udp.localConnMap[msg.RemoteAddr]
+	defer udp.lock.Unlock()
 	var err error
+	var localConn *net.UDPConn
+	var localConnUnit, ok = udp.localConnMap[remoteAddr]
 	if !ok {
 		localConn, err = udp.newLocalConn()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		udp.localConnMap[msg.RemoteAddr] = localConn
-		go udp.joinLocalToProxy(localConn, msg.RemoteAddr)
+		localConnUnit = UdpConnUnit{
+			udpConn: localConn,
+			activeAt: time.Now(),
+		}
+		udp.localConnMap[remoteAddr] = localConnUnit
+		go udp.joinLocalToProxy(localConn, remoteAddr)
+	} else {
+		localConn = localConnUnit.udpConn
+		localConnUnit.activeAt = time.Now()
 	}
-	udp.lock.Unlock()
+	return localConn, nil
+}
+
+func (udp *UdpHandler) handleMessage(msg *cmd.UdpPackage) error{
+	var localConn, err = udp.getLocalConn(msg.RemoteAddr)
+	if err != nil {
+		return err
+	}
 	_, err = localConn.Write(msg.Body)
 	if err != nil {
 		udp.lock.Lock()

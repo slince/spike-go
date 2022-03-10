@@ -4,6 +4,7 @@ import (
 	"github.com/slince/spike/pkg/cmd"
 	"github.com/slince/spike/pkg/conn"
 	"github.com/slince/spike/pkg/log"
+	"github.com/slince/spike/pkg/transfer"
 	"net"
 	"strconv"
 )
@@ -63,22 +64,26 @@ func (udp *UdpHandler) Listen(serverPort int) error {
 		}()
 
 		go func() {
-		Handle:
+			var err error
+			Handle:
 			for {
-				var command, err = bridge.Read()
+				var command transfer.Command
+				command, err = bridge.Read()
 				if err != nil {
+					udp.logger.Error("Failed to read udp package from proxy conn, error: ", err)
 					break
 				}
 				switch command := command.(type) {
 				case *cmd.UdpPackage:
 					_, err = listener.WriteToUDP(command.Body, command.RemoteAddr)
 					if err != nil {
-						break Handle
+						udp.logger.Error("Failed to send udp package to pub conn ", err)
 					}
 				default:
 					break Handle
 				}
 			}
+
 			listener.Close()
 			proxyConn.Close()
 		}()

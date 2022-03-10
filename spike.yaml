@@ -18,3 +18,10 @@ tunnels:
     local_host: 8.8.8.8
     local_port: 53
     server_port: 8810
+
+  - protocol: http
+    local_host: www.json.cn
+    local_port: 80
+    server_port: 8811
+    headers:
+      x-spike: yes

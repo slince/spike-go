@@ -8,6 +8,7 @@ import (
 	"github.com/slince/spike/pkg/tunnel"
 	"github.com/slince/spike/server/proxy"
 	"net"
+	"strconv"
 )
 
 type Worker struct {
@@ -44,12 +45,15 @@ func (w *Worker) createHandler() (proxy.Handler, error){
 			w.ser.logger.Error("Failed to send request proxy command")
 		}
 	})
+	var localAddress = net.JoinHostPort(w.tun.LocalHost, strconv.Itoa(w.tun.LocalPort))
 	var err error
 	switch w.tun.Protocol {
 	case "tcp":
-		handler = proxy.NewTcpHandler(w.ser.logger, connPool)
+		handler = proxy.NewTcpHandler(w.ser.logger, connPool, localAddress)
 	case "udp":
 		handler = proxy.NewUdpHandler(w.ser.logger, connPool)
+	case "http":
+		handler = proxy.NewHttpHandler(w.ser.logger, connPool, localAddress, w.tun.Headers)
 	default:
 		err = fmt.Errorf("unsupported tunel protocol %s", w.tun.Protocol)
 	}
