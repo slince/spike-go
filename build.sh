@@ -23,9 +23,20 @@ function build() {
 os=(linux darwin windows)
 arch=(386 amd64 arm)
 
+rm -rf ./dist/*
+
 for i in "${os[@]}" ; do
     for j in "${arch[@]}" ; do
         build "$i" "$j"
+    done
+done
+
+cd dist || exit
+
+echo "Compress dist"
+for i in "${os[@]}" ; do
+    for j in "${arch[@]}" ; do
+        tar -zcf "${1}_${2}.tar.gz" "${1}_${2}" && rm -rf "${1}_${2}"
     done
 done
 

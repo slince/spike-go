@@ -38,7 +38,7 @@ func init(){
 	var curDir, _ = os.Getwd()
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/spiked.yaml" , "Config file (default is Current dir/spiked.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Bind host")
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",8808, "Bind port")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",6200, "Bind port")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u","", "User")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Password for the given user")
 }

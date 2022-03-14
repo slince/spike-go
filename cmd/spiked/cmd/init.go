@@ -11,10 +11,10 @@ import (
 
 var content = `
 host: 127.0.0.1
-port: 8808
+port: 6200
 users:
-	- username: admin
-	  password: admin
+  - username: admin
+    password: admin
 log:
   console: true
   level: trace

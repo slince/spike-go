@@ -37,7 +37,7 @@ func init(){
 	var curDir, _ = os.Getwd()
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", curDir + "/spike.yaml" , "Config file (default is Current dir/spike.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "127.0.0.1", "Server host")
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",8808, "Server port")
+	rootCmd.PersistentFlags().IntVarP(&port, "port", "P",6200, "Server port")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u","admin", "User for login")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "admin", "Password for the given user")
 

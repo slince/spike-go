@@ -11,7 +11,7 @@ import (
 
 var content = `
 host: 127.0.0.1 # server host
-port: 8808
+port: 6200
 user: 
      username: admin
      password: admin
@@ -24,12 +24,18 @@ log:
 tunnels:
   - protocol: tcp
     local_port: 3306
-    server_port: 8809
+    server_port: 6201
 
   - protocol: udp
-    local_host: 127.0.0.1
+    local_host: 8.8.8.8
+    local_port: 53
+    server_port: 6202
+
+  - protocol: http
     local_port: 80
-    server_port: 8810
+    server_port: 6203
+    headers:
+      x-spike: yes
 `
 
 var force bool

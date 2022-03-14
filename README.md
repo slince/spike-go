@@ -20,24 +20,18 @@
     </a>
 </p>
 
-Spike is a fast reverse proxy built on top of [ReactPHP](https://github.com/reactphp) that helps to expose your local services to the internet.
+Spike is a fast reverse proxy written in golang that helps to expose your local services to the internet.
 
 [简体中文](./README-zh_CN.md)
 
 ## Installation
 
-Install via composer
-
-```bash
-composer global require slince/spike
-```
-
-> Both the server and local machine need to install this.
+Download the latest programs from [Release](https://github.com/slince/spike-go/releases) according to your operating system and architecture.
 
 ## Schematic diagram
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/slince/spike/master/resources/diagram.png"/>
+    <img src="https://raw.githubusercontent.com/slince/spike-go/master/etc/diagram.png"/>
 </p>
 
 ## Configure the server
@@ -49,7 +43,7 @@ A public machine that can be accessed on the internet is needed. Assuming alread
 Use the following command to start the server
 
 ```bash
-$ spiked --address=127.0.0.1:8088
+$ spiked -p 6200
 ```
 
 The above command can create a basic service. If you want to customize more information, you should start the server based on
@@ -62,7 +56,7 @@ the configuration file.
 Execute the following command to create it.
 
 ```bash
-$ spiked init --dir=/home/conf --format=json
+$ spiked init
 ```
 
 Yaml,Xml,Ini and Json(default) files are supported. Use the following command for help.
@@ -77,7 +71,7 @@ $ spiked init -h
 - Executes the following command to start the service.
  
 ```bash
- $ spiked --config=/home/conf/spiked.json
+ $ spiked --config=/home/conf/spiked.yaml
 ```
 
 ## Configure the client.
@@ -87,7 +81,7 @@ You should first create a configuration file for the client.
 - Execute the following command to create it
 
 ```bash
-$ spike init --dir=/home/conf --format=json
+$ spike init
 ```
 Use the following command for help about this command
 
@@ -100,50 +94,46 @@ $ spike init -h
 - Start the client service.
  
 ```bash
-$ spike --config=/home/conf/spike.json
+$ spike --config=/home/conf/spike.yaml
 ```
 
 
 ## Tunnel
 
-The definition of the tunnel only in the client, the server does not need to do any configuration, so as to achieve the most simplified configuration.
+Tunnels only need to be defined on the client side, The server does not need to do anything.
 
-> Now supports both http and tcp tunnels
+> Now supports tcp udp and http
 
 Open the configuration file for the client and modify the parameters for "tunnel".
- 
-- Add an HTTP tunnel
 
-```json
-{
-    "protocol": "http",
-    "serverPort": 8086,
-    "proxyHosts": {
-        "www.foo.com": "127.0.0.1:80",
-        "www.bar.com": "192.168.1.101:8080"
-    }
-}
-```
-Restarts the client service. Visit "http://www.foo.com:8086", the service will be forwarded to the local "127.0.0.1:80"; 
-Note that resolve "www.foo.com" to the server IP.
+```yaml
+tunnels:
+  - protocol: tcp
+    local_port: 3306
+    server_port: 6201
 
-- Add a TCP tunnel
+  - protocol: udp
+    local_host: 8.8.8.8
+    local_port: 53
+    server_port: 6202
 
-The services based on the tcp can use the tunnel, such as: mysql, redis, ssh and so on; The following is an example of proxy mysql service
-
-```json
-{
-    "protocol": "tcp",
-    "serverPort": 8087,
-    "host": "127.0.0.1:3306"
-}
+  - protocol: http
+    local_port: 80
+    server_port: 6203
+    headers:
+      x-spike: yes
 ```
 
-Execute the following command to visit the local mysql service.
+Restarts the client service. 
 
-```bash
-$ mysql -h SERVER IP -P 8087
-```
+1. Visit `http://{SERVER_IP}:6203`, the service will be forwarded to the local `127.0.0.1:80`.
+2. The services based on the tcp can use the tunnel, such as: mysql, redis, ssh and so on; The following is an example of proxy mysql service
+    
+    Execute the following command to visit the local mysql service.
+
+    ```bash
+    $ mysql -h {SERVER_IP} -P 6201
+    ```
 
 ## Client authentication
 
@@ -152,14 +142,22 @@ if you want to enable this.
 
 - Enable authentication
 
-Open the configuration file for the server and modify parameters for "auth" and restart the service.
+Open the configuration file "spiked.yaml" for the server and modify parameters for `users` and restart the service.
 
-> Currently only supports a simple user name password authentication, more authentication methods will be added later.
-
+```yaml
+users:
+  - username: admin
+    password: admin
+```
 - Modify the client identity information
 
-Open the configuration file for the client and modify parameters for "auth". Keep the same parameters as the server.
+```yaml
+user:
+  username: admin
+  password: admin
+```
 
+Open the configuration file for the client and modify parameters for "auth". Keep the same parameters as the server.
 
 ## Configure log
 
@@ -170,32 +168,33 @@ will write all the logs to the specified file;  Default log level is "info"; You
 
 ```bash
 $ spike list
-   _____   _____   _   _   _    _____
-  /  ___/ |  _  \ | | | | / /  | ____|
-  | |___  | |_| | | | | |/ /   | |__
-  \___  \ |  ___/ | | | |\ \   |  __|
-   ___| | | |     | | | | \ \  | |___
-  /_____/ |_|     |_| |_|  \_\ |_____|
-  
-  Spike Client 0.0.1
-  
-  Usage:
-    command [options] [arguments]
-  
-  Options:
-    -h, --help            Display this help message
-    -q, --quiet           Do not output any message
-    -V, --version         Display this application version
-        --ansi            Force ANSI output
-        --no-ansi         Disable ANSI output
-    -n, --no-interaction  Do not ask any interactive question
-    -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
-  
-  Available commands:
-    help        Displays help for a command
-    init        Create a configuration file in the specified directory
-    list        Lists commands
-    list-proxy  Lists all supported proxy hosts by the client
+ _____   _____   _   _   _    _____
+/  ___/ |  _  \ | | | | / /  | ____|
+| |___  | |_| | | | | |/ /   | |__
+\___  \ |  ___/ | | | |\ \   |  __|
+ ___| | | |     | | | | \ \  | |___
+/_____/ |_|     |_| |_|  \_\ |_____|
+
+Usage:
+  spike [flags]
+  spike [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  init        Create a configuration file in the current directory
+  version     Print spike version
+  view-proxy  Show proxy of the server
+
+Flags:
+      --config string     Config file (default is Current dir/spike.yaml) (default "**/spike.yaml")
+  -h, --help              help for spike
+  -H, --host string       Server host (default "127.0.0.1")
+  -p, --password string   Password for the given user (default "admin")
+  -P, --port int          Server port (default 8808)
+  -u, --username string   User for login (default "admin")
+
+Use "spike [command] --help" for more information about a command.
 ```
 
 ## Changelog

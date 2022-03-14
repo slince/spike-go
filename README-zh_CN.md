@@ -29,7 +29,7 @@ Spike是一个可以用来将你的内网服务暴露在公网的快速的反向
 ## 结构图
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/slince/spike/master/resources/diagram.png"/>
+    <img src="https://raw.githubusercontent.com/slince/spike-go/master/etc/diagram.png"/>
 </p>
 
 ## 配置服务端
@@ -41,7 +41,7 @@ Spike是一个可以用来将你的内网服务暴露在公网的快速的反向
 执行下面命令以开启服务
 
 ```bash
-$ spiked -p 8808
+$ spiked -p 6200
 ```
 上述命令可以创建一个基本服务，如果你需要定制更多信息可以基于配置文件服务; 
 
@@ -104,28 +104,26 @@ $ spike --config=/home/conf/spike.yaml
 
 打开本地配置文件"spike.yaml", 修改tunnel一项;
 
-- 添加http隧道
+- 添加隧道
 
 ```yaml
-
 tunnels:
   - protocol: tcp
     local_port: 3306
-    server_port: 8809
+    server_port: 6201
 
   - protocol: udp
     local_host: 8.8.8.8
     local_port: 53
-    server_port: 8810
+    server_port: 6202
 
   - protocol: http
     local_port: 80
-    server_port: 8811
+    server_port: 6203
     headers:
       x-spike: yes
-
 ```
-启动客户端，访问 "http://{SERVER_IP}:8086" , 服务将会被代理到本地"127.0.0.1:80"; 
+启动客户端，访问 "http://{SERVER_IP}:6203" , 服务将会被代理到本地"127.0.0.1:80"; 
 
 - 添加tcp隧道
 
@@ -134,12 +132,12 @@ tunnels:
 ```yaml
   - protocol: tcp
     local_port: 3306
-    server_port: 8809
+    server_port: 6201
 ```
 执行下面命令访问本地mysql服务：
 
 ```bash
-$ mysql -h {SERVER_IP} -P 8809
+$ mysql -h {SERVER_IP} -P 6201
 ```
 
 ## 客户端身份认证
@@ -180,33 +178,34 @@ log:
 ## 查看所有命令
 
 ```bash
-$ spike list
-   _____   _____   _   _   _    _____
-  /  ___/ |  _  \ | | | | / /  | ____|
-  | |___  | |_| | | | | |/ /   | |__
-  \___  \ |  ___/ | | | |\ \   |  __|
-   ___| | | |     | | | | \ \  | |___
-  /_____/ |_|     |_| |_|  \_\ |_____|
-  
-  Spike Client 0.0.1
-  
-  Usage:
-    command [options] [arguments]
-  
-  Options:
-    -h, --help            Display this help message
-    -q, --quiet           Do not output any message
-    -V, --version         Display this application version
-        --ansi            Force ANSI output
-        --no-ansi         Disable ANSI output
-    -n, --no-interaction  Do not ask any interactive question
-    -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
-  
-  Available commands:
-    help        Displays help for a command
-    init        Create a configuration file in the specified directory
-    list        Lists commands
-    list-proxy  Lists all supported proxy hosts by the client
+$ spike -h
+ _____   _____   _   _   _    _____
+/  ___/ |  _  \ | | | | / /  | ____|
+| |___  | |_| | | | | |/ /   | |__
+\___  \ |  ___/ | | | |\ \   |  __|
+ ___| | | |     | | | | \ \  | |___
+/_____/ |_|     |_| |_|  \_\ |_____|
+
+Usage:
+  spike [flags]
+  spike [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  init        Create a configuration file in the current directory
+  version     Print spike version
+  view-proxy  Show proxy of the server
+
+Flags:
+      --config string     Config file (default is Current dir/spike.yaml) (default "**/spike.yaml")
+  -h, --help              help for spike
+  -H, --host string       Server host (default "127.0.0.1")
+  -p, --password string   Password for the given user (default "admin")
+  -P, --port int          Server port (default 8808)
+  -u, --username string   User for login (default "admin")
+
+Use "spike [command] --help" for more information about a command.
 ```
 
 ## Changelog
