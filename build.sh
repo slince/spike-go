@@ -36,7 +36,10 @@ cd dist || exit
 echo "Compress dist"
 for i in "${os[@]}" ; do
     for j in "${arch[@]}" ; do
-        tar -zcf "${1}_${2}.tar.gz" "${1}_${2}" && rm -rf "${1}_${2}"
+       target="${i}_${j}"
+       if [ -d "$target" ]; then
+           tar -zcf "${target}.tar.gz" "$target" && rm -rf "$target"
+       fi
     done
 done
 

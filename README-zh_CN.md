@@ -202,7 +202,7 @@ Flags:
   -h, --help              help for spike
   -H, --host string       Server host (default "127.0.0.1")
   -p, --password string   Password for the given user (default "admin")
-  -P, --port int          Server port (default 8808)
+  -P, --port int          Server port (default 6200)
   -u, --username string   User for login (default "admin")
 
 Use "spike [command] --help" for more information about a command.
