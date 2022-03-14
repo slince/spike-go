@@ -20,20 +20,13 @@
     </a>
 </p>
 
-Spike是一个可以用来将你的内网服务暴露在公网的快速的反向代理，基于[ReactPHP](https://github.com/reactphp)，采用IO多路复用模型。
+Spike是一个可以用来将你的内网服务暴露在公网的快速的反向代理。
 
 ## 安装
 
-通过 composer 安装
+直接到 [Release](https://github.com/slince/spike-go/releases) 页面下载对应平台的可执行文件即可 
 
-```bash
-composer global require slince/spike
-```
-
-> 服务器与本地都需要执行此命令安装
-
-
-## 原理图
+## 结构图
 
 <p align="center">
     <img src="https://raw.githubusercontent.com/slince/spike/master/resources/diagram.png"/>
@@ -48,9 +41,9 @@ composer global require slince/spike
 执行下面命令以开启服务
 
 ```bash
-$ spiked --address=127.0.0.1:8088
+$ spiked -p 8808
 ```
-上述命令可以创建一个基本服务，如果你需要定制更多信息可以基于配置文件服务
+上述命令可以创建一个基本服务，如果你需要定制更多信息可以基于配置文件服务; 
 
 
 ### 基于配置文件
@@ -60,10 +53,9 @@ $ spiked --address=127.0.0.1:8088
 执行下面命令创建文件
 
 ```bash
-$ spiked init --dir=/home/conf --format=json
+$ spiked init
 ```
-
-支持yaml,xml,ini,json四种格式的配置文件，默认使用json，使用下面命令查看帮助
+使用下面命令查看帮助
 
 ```bash
 $ spiked init -h
@@ -74,7 +66,7 @@ $ spiked init -h
 - 基于配置文件开启服务
  
 ```bash
- $ spiked --config=/home/conf/spiked.json
+ $ spiked --config=/home/conf/spiked.yaml
 ```
 
 ## 配置本地客户端
@@ -86,7 +78,7 @@ $ spiked init -h
 执行下面命令创建文件
 
 ```bash
-$ spike init --dir=/home/conf --format=json
+$ spike init
 ```
 
 使用下面命令查看帮助
@@ -100,7 +92,7 @@ $ spike init -h
 - 基于配置文件开启服务
  
 ```bash
-$ spike --config=/home/conf/spike.json
+$ spike --config=/home/conf/spike.yaml
 ```
 
 
@@ -108,39 +100,46 @@ $ spike --config=/home/conf/spike.json
 
 隧道的定义只在客户端，服务端不需要做任何配置，从而达到最简化配置。
 
-> 目前支持http与tcp两种隧道
+> 目前支持tcp,udp,http 三种隧道
 
-打开本地配置文件"spike.json", 修改tunnel一项;
+打开本地配置文件"spike.yaml", 修改tunnel一项;
 
 - 添加http隧道
 
-```json
-{
-    "protocol": "http",
-    "serverPort": 8086,
-    "proxyHosts": {
-        "www.foo.com": "127.0.0.1:80",
-        "www.bar.com": "192.168.1.101:8080"
-    }
-}
+```yaml
+
+tunnels:
+  - protocol: tcp
+    local_port: 3306
+    server_port: 8809
+
+  - protocol: udp
+    local_host: 8.8.8.8
+    local_port: 53
+    server_port: 8810
+
+  - protocol: http
+    local_port: 80
+    server_port: 8811
+    headers:
+      x-spike: yes
+
 ```
-启动客户端，访问 "http://www.foo.com:8086" , 服务将会被代理到本地"127.0.0.1:80"; 注意此处需要把 "www.foo.com" 解析到服务端所在机器上
+启动客户端，访问 "http://{SERVER_IP}:8086" , 服务将会被代理到本地"127.0.0.1:80"; 
 
 - 添加tcp隧道
 
 基于tcp协议的应用层协议都可使用本隧道代理，如：mysql,redis,ssh...等；下面是代理mysql服务的例子
 
-```json
-{
-    "protocol": "tcp",
-    "serverPort": 8087,
-    "host": "127.0.0.1:3306"
-}
+```yaml
+  - protocol: tcp
+    local_port: 3306
+    server_port: 8809
 ```
 执行下面命令访问本地mysql服务：
 
 ```bash
-$ mysql -h 服务器地址 -P 8087
+$ mysql -h {SERVER_IP} -P 8809
 ```
 
 ## 客户端身份认证
@@ -149,20 +148,35 @@ $ mysql -h 服务器地址 -P 8087
 
 - 服务端启用认证服务
 
-打开"spiked.json"文件，修改auth一项信息，然后重启服务
+打开"spiked.yaml"文件，修改 `users` 选项信息，然后重启服务
 
+```yaml
+users:
+  - username: admin
+    password: admin
+```
 > 目前只支持简单的用户名密码认证方式，更多的认证方式后面会陆续加入.
 
 - 修改客户端身份信息
 
-打开本地"spike.json"文件，修改auth一栏信息，与服务端配置保持一致即可
+打开本地"spike.yaml"文件，修改 `user` 信息，与服务端配置保持一致即可
 
-
+```yaml
+user:
+  username: admin
+  password: admin
+```
 ## 日志配置
 
-默认开启屏幕输出与文件两种形式的日志；前者会打印到控制台；后者会写入到指定文件；默认日志等级是"info"，此项信息可以通过
+默认开启屏幕输出与文件两种形式的日志；前者会打印到控制台；后者会写入到指定文件；默认日志等级是 `trace`，此项信息可以通过
 修改配置文件"log"一项调整；
 
+```yaml
+log:
+  console: true
+  level: info
+  file: "./spiked.log"
+```
 ## 查看所有命令
 
 ```bash

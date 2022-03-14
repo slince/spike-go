@@ -2,3 +2,4 @@
 dist/*
 !dist/.gitkeep
 *.log
+.DS_Store
