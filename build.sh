@@ -2,9 +2,9 @@
 
 echo "Build Spike Start..."
 
-Version=`git describe --tags`
-BuildTime=`date +%FT%T%z`
-GoVersion=`go version`
+Version=$(git describe --tags)
+BuildTime=$(date +%FT%T%z)
+GoVersion=$(go version)
 
 LDFLAGS="-w -s\
  -X 'github.com/slince/spike/pkg/build.Version=${Version}'\
@@ -34,11 +34,13 @@ done
 cd dist || exit
 
 echo "Compress dist"
+version=$(git tag)
+
 for i in "${os[@]}" ; do
     for j in "${arch[@]}" ; do
        target="${i}_${j}"
        if [ -d "$target" ]; then
-           tar -zcf "${target}.tar.gz" "$target" && rm -rf "$target"
+           tar -zcf "spike_${version}_${target}.tar.gz" "$target" && rm -rf "$target"
        fi
     done
 done
