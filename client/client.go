@@ -107,7 +107,7 @@ func (cli *Client) onLoginCall(command *cmd.LoginRes) error{
 		if err2 != nil {
 			cli.logger.Warn("Fail to dump client id to the session file")
 		}
-		//go cli.autoPing() // heartbeat
+		go cli.autoPing() // heartbeat
 		err = cli.registerTunnels()
 	} else {
 		err= fmt.Errorf("failed to log in to the server: %s", command.Error)

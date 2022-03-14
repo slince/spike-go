@@ -5,5 +5,5 @@ users:
     password: admin
 log:
   console: true
-  level: trace
+  level: info
   file: "./spiked.log"

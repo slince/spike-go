@@ -6,7 +6,7 @@ user:
 
 log:
   console: true  # enable console output
-  level: trace  # trace debug info warn error
+  level: info  # trace debug info warn error
   file: ./spike.log # generate log file
 
 tunnels:

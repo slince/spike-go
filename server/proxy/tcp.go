@@ -5,9 +5,7 @@ import (
 	"github.com/slince/spike/pkg/log"
 	"github.com/slince/spike/pkg/tunnel"
 	"net"
-	"os"
 	"strconv"
-	"time"
 )
 
 type TcpHandler struct {
@@ -19,7 +17,7 @@ type TcpHandler struct {
 	listenAddress string
 	localAddress string
 	handleConnCallback func(pubConn net.Conn)
-	stop chan bool
+	pubConns chan net.Conn
 }
 
 func NewTcpHandler(logger *log.Logger, connPool *conn.Pool, tun tunnel.Tunnel) *TcpHandler{
@@ -29,7 +27,7 @@ func NewTcpHandler(logger *log.Logger, connPool *conn.Pool, tun tunnel.Tunnel) *
 		tun: tun,
 		listenAddress: net.JoinHostPort("0.0.0.0", strconv.Itoa(tun.ServerPort)),
 		localAddress: net.JoinHostPort(tun.LocalHost, strconv.Itoa(tun.LocalPort)),
-		stop: make(chan bool, 1),
+		pubConns: make(chan net.Conn, 100),
 	}
 	handler.handleConnCallback = handler.handleConn
 	return handler
@@ -43,27 +41,23 @@ func (tcp *TcpHandler) Listen() (chan bool, error){
 	}
 	tcp.listener = listener
 	var stop = make(chan bool, 1)
-	go func() {
-		Handle:
+	var connReader = func() {
 		for {
-			select {
-			case <- tcp.stop:
-				break Handle
-			default:
-				_ = listener.SetDeadline(time.Now().Add(time.Second * 5))
-				var con, err1 = listener.Accept()
-				if err1 != nil {
-					if os.IsTimeout(err1) {
-						break
-					}
-					err = err1
-					break Handle
-				}
-				go tcp.handleConnCallback(con)
+			var con, err1 = listener.Accept()
+			if err1 != nil {
+				break
 			}
+			tcp.pubConns <- con
 		}
 		stop <- true
-	}()
+	}
+	var connConsume = func() {
+		for pubConn := range tcp.pubConns {
+			go tcp.handleConnCallback(pubConn)
+		}
+	}
+	go connReader()
+	go connConsume()
 	return stop, nil
 }
 
@@ -72,8 +66,7 @@ func (tcp *TcpHandler) AddProxyConn(proxyConn net.Conn) {
 }
 
 func (tcp *TcpHandler) Close() {
-	tcp.stop <- true
-	//_ = tcp.listener.Close()
+	_ = tcp.listener.Close()
 }
 
 func (tcp *TcpHandler) handleConn(pubConn net.Conn) {
@@ -81,7 +74,7 @@ func (tcp *TcpHandler) handleConn(pubConn net.Conn) {
 	var proxyConn, err = tcp.proxyConnPool.Get()
 	if err != nil {
 		tcp.logger.Error("Failed to get proxy conn from client, error", err)
-		pubConn.Close()
+		_ = pubConn.Close()
 		return
 	}
 	conn.Combine(proxyConn, pubConn)

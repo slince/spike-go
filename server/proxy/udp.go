@@ -38,72 +38,84 @@ func (udp *UdpHandler) Listen() (chan bool, error) {
 	}
 
 	listener, err := net.ListenUDP("udp", address)
-	udp.listener = listener
 	if err != nil {
 		return nil, err
 	}
+	udp.listener = listener
+
 	var stop = make(chan bool, 1)
 
-	go func() {
-		var proxyConn, err  = udp.proxyConnPool.Get()
-		if err != nil {
-			udp.logger.Error("The worker is closed, failed to get proxy conn from client, error: ", err)
-			return
+	var readUdp = func(proxyConn net.Conn, bridge *transfer.Bridge, wait *sync.WaitGroup) {
+		defer listener.Close()
+		defer proxyConn.Close()
+		defer wait.Done()
+
+		buf := make([]byte, 1024)
+		for {
+			read, remoteAddr, _ := listener.ReadFromUDP(buf)
+			if read == 0 {
+				stop <- true
+				break
+			}
+			var udpPackage = &cmd.UdpPackage{
+				Body: buf[0:read],
+				RemoteAddr: remoteAddr,
+			}
+			err = bridge.Write(udpPackage)
+			if err != nil {
+				udp.logger.Error("Failed to write udp package to proxy conn:", err)
+				break
+			}
 		}
-		var bridge = cmd.NewBridge(proxyConn)
-		var wait sync.WaitGroup
-		wait.Add(2)
+	}
 
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				read, remoteAddr, _ := listener.ReadFromUDP(buf)
-				if read == 0 {
-					break
-				}
-				var udpPackage = &cmd.UdpPackage{
-					Body: buf[0:read],
-					RemoteAddr: remoteAddr,
-				}
-				err = bridge.Write(udpPackage)
-				if err != nil {
-					udp.logger.Error("Failed to write udp package to proxy conn:", err)
-					break
-				}
-			}
-			listener.Close()
-			proxyConn.Close()
-			wait.Done()
-		}()
+	var readProxy = func(proxyConn net.Conn, bridge *transfer.Bridge, wait *sync.WaitGroup) {
+		defer proxyConn.Close()
+		defer wait.Done()
 
-		go func() {
-			var err error
-			Handle:
-			for {
-				var command transfer.Command
-				command, err = bridge.Read()
-				if err != nil {
-					udp.logger.Error("Failed to read udp package from proxy conn, error: ", err)
-					break
-				}
-				switch command := command.(type) {
-				case *cmd.UdpPackage:
-					_, err = listener.WriteToUDP(command.Body, command.RemoteAddr)
-					if err != nil {
-						udp.logger.Error("Failed to send udp package to pub conn ", err)
-					}
-				default:
-					break Handle
-				}
+		Handle:
+		for {
+			var command, err = bridge.Read()
+			if err != nil {
+				udp.logger.Error("Failed to read udp package from proxy conn, error: ", err)
+				break
 			}
-			listener.Close()
-			proxyConn.Close()
-			wait.Done()
-		}()
-		wait.Wait()
-		stop <- true
-	}()
-	return stop, nil
+			switch command := command.(type) {
+			case *cmd.UdpPackage:
+				_, err = listener.WriteToUDP(command.Body, command.RemoteAddr)
+				if err != nil {
+					udp.logger.Error("Failed to send udp package to pub conn ", err)
+				}
+			default:
+				break Handle
+			}
+		}
+	}
+
+	var listenStop = make(chan bool, 1)
+	var handleUdp = func() {
+		for {
+			select {
+			case <- stop:
+				listenStop <- true
+				return
+			default:
+				var proxyConn, err = udp.proxyConnPool.Get()
+				if err != nil {
+					udp.logger.Error("The worker is closed, failed to get proxy conn from client, error: ", err)
+					return
+				}
+				var bridge = cmd.NewBridge(proxyConn)
+				var wait sync.WaitGroup
+				wait.Add(2)
+				go readUdp(proxyConn, bridge, &wait)
+				go readProxy(proxyConn, bridge, &wait)
+				wait.Wait()
+			}
+		}
+	}
+	go handleUdp()
+	return listenStop, nil
 }
 
 func (udp *UdpHandler) AddProxyConn(proxyConn net.Conn) {
@@ -111,6 +123,5 @@ func (udp *UdpHandler) AddProxyConn(proxyConn net.Conn) {
 }
 
 func (udp *UdpHandler) Close() {
-	//udp.stop <- true
 	_ = udp.listener.Close()
 }

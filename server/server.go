@@ -95,10 +95,11 @@ func (ser *Server) checkAlive(){
 	var timer = time.NewTicker(10 * time.Second)
 	defer timer.Stop()
 	for range timer.C {
-		ser.logger.Trace("Check all clients are alive:", len(ser.Clients))
+		ser.logger.Trace("Check clients activity:", len(ser.Clients))
 		var aliveTime = time.Now().Add(-20 * time.Second)
 		for _, client := range ser.Clients {
 			if client.ActiveAt.Before(aliveTime) {
+				ser.logger.Warn(fmt.Sprintf("The client %s is timeout", client.Id))
 				ser.closeClient(client)
 			}
 		}

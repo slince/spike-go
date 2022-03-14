@@ -37,27 +37,30 @@ func NewUdpHandler(logger *log.Logger, localAddress string, proxyConn net.Conn) 
 
 func (udp *UdpHandler) Start() error{
 	// Read Msg
-	go func() {
-		Handle:
+	var readMsg = func() {
+		defer udp.proxyConn.Close()
+		defer close(udp.messages)
 		for {
 			var command, err = udp.bridge.Read()
 			if err != nil {
-				break
+				return
 			}
 			switch command := command.(type) {
 			case *cmd.UdpPackage:
 				udp.messages <- command
 			default:
-				break Handle
+				return
 			}
 		}
-		udp.proxyConn.Close()
-	}()
-	go udp.checkAlive()
-
-	for msg := range udp.messages {
-		go udp.handleMessage(msg)
 	}
+	var consumeMsg = func() {
+		for msg := range udp.messages {
+			go udp.handleMessage(msg)
+		}
+	}
+	go udp.checkAlive()
+	go readMsg()
+	go consumeMsg()
 	return nil
 }
 
