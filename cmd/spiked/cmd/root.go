@@ -12,6 +12,14 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "spiked",
 	Short: "Spike is a fast reverse proxy that helps to expose local services to the internet",
+	Long: `
+ _____   _____   _   _   _    _____   _____  
+/  ___/ |  _  \ | | | | / /  | ____| |  _  \ 
+| |___  | |_| | | | | |/ /   | |__   | | | | 
+\___  \ |  ___/ | | | |\ \   |  __|  | | | | 
+ ___| | | |     | | | | \ \  | |___  | |_| | 
+/_____/ |_|     |_| |_|  \_\ |_____| |_____/ 
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return start()
 	},
