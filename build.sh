@@ -21,7 +21,7 @@ function build() {
 }
 
 os=(linux darwin windows)
-arch=(386 amd64 arm)
+arch=(386 amd64 arm arm64)
 
 rm -rf ./dist/*
 
@@ -34,7 +34,7 @@ done
 cd dist || exit
 
 echo "Compress dist"
-version=$(git tag)
+version=$(git describe  --tags --abbrev=0)
 
 for i in "${os[@]}" ; do
     for j in "${arch[@]}" ; do
